@@ -1,16 +1,36 @@
 import axios from 'axios'
 
+const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1'
+const apiBaseUrl = (() => {
+  if (typeof window === 'undefined') return configuredBaseUrl
+  try {
+    const url = new URL(configuredBaseUrl, window.location.origin)
+    const localHosts = ['localhost', '127.0.0.1', '::1']
+    if (localHosts.includes(url.hostname) && localHosts.includes(window.location.hostname)) url.hostname = window.location.hostname
+    return url.toString().replace(/\/$/, '')
+  } catch { return configuredBaseUrl }
+})()
+
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1',
+  baseURL: apiBaseUrl,
   withCredentials: true,
+  withXSRFToken: true,
+  xsrfCookieName: 'XSRF-TOKEN',
+  xsrfHeaderName: 'X-XSRF-TOKEN',
   headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
 })
 
-export const csrf = () => axios.get(`${api.defaults.baseURL?.replace(/\/api\/v1$/, '')}/sanctum/csrf-cookie`, { withCredentials: true })
+export const csrf = () => axios.get(`${api.defaults.baseURL?.replace(/\/api\/v1$/, '')}/sanctum/csrf-cookie`, { withCredentials: true, withXSRFToken: true, xsrfCookieName: 'XSRF-TOKEN', xsrfHeaderName: 'X-XSRF-TOKEN' })
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const request = error.config as (typeof error.config & { _csrfRetried?: boolean }) | undefined
+    if (error.response?.status === 419 && request && !request._csrfRetried) {
+      request._csrfRetried = true
+      await csrf()
+      return api(request)
+    }
     const normalized = new Error(error.response?.data?.message ?? 'Something went wrong. Please try again.') as Error & { status?: number; errors?: Record<string, string[]> }
     normalized.status = error.response?.status
     normalized.errors = error.response?.data?.errors
