@@ -1,0 +1,47 @@
+import { useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useMutation } from '@tanstack/react-query'
+import { useForm, type UseFormRegister } from 'react-hook-form'
+import { z } from 'zod'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Eye, EyeOff, LogIn, Sparkles } from 'lucide-react'
+import { authService } from '../../services/authService'
+
+const password = z.string().min(8, 'Use at least 8 characters.').regex(/[A-Z]/, 'Add an uppercase letter.').regex(/[a-z]/, 'Add a lowercase letter.').regex(/[0-9]/, 'Add a number.')
+const loginSchema = z.object({ email: z.string().min(1, 'Email or username is required.'), password: z.string().min(1, 'Password is required.'), remember: z.boolean() })
+const registerSchema = z.object({ name: z.string().min(2, 'Enter your full name.'), username: z.string().min(3, 'Use at least 3 characters.').regex(/^[a-zA-Z0-9_-]+$/, 'Use letters, numbers, dashes, or underscores.'), email: z.string().email('Enter a valid email.'), password, password_confirmation: z.string(), terms_accepted: z.boolean().refine(Boolean, 'Accept the Terms of Service.'), privacy_accepted: z.boolean().refine(Boolean, 'Accept the Privacy Policy.') }).refine((value) => value.password === value.password_confirmation, { path: ['password_confirmation'], message: 'Passwords do not match.' })
+type LoginValues = z.infer<typeof loginSchema>
+type RegisterValues = z.infer<typeof registerSchema>
+
+function FieldError({ message }: { message?: string }) { return message ? <small className="field-error">{message}</small> : null }
+function PasswordField({ register, name, error }: { register: UseFormRegister<Record<string, string | boolean>>; name: string; error?: string }) { const [visible, setVisible] = useState(false); return <div className="password-field"><input type={visible ? 'text' : 'password'} {...register(name)} placeholder="Your password" /><button type="button" onClick={() => setVisible((value) => !value)} aria-label={visible ? 'Hide password' : 'Show password'}>{visible ? <EyeOff size={16} /> : <Eye size={16} />}</button><FieldError message={error} /></div> }
+
+export function LoginPage() {
+  const navigate = useNavigate()
+  const form = useForm<LoginValues>({ resolver: zodResolver(loginSchema), defaultValues: { remember: false } })
+  const mutation = useMutation({ mutationFn: authService.login, onSuccess: (data) => navigate(data.user.role === 'super_admin' ? '/admin/overview' : data.user.role === 'moderator' ? '/moderator/overview' : '/dashboard') })
+  return <div className="auth-card"><p className="eyebrow">Welcome back</p><h1>Sign in to your space</h1><p className="muted">Continue exploring the people and places that feel right.</p><form onSubmit={form.handleSubmit((values) => mutation.mutate(values))}><label>Email or username<input {...form.register('email')} placeholder="you@example.com" autoComplete="username" /><FieldError message={form.formState.errors.email?.message} /></label><label>Password<PasswordField register={form.register as UseFormRegister<Record<string, string | boolean>>} name="password" error={form.formState.errors.password?.message} /></label><div className="form-row"><label className="check"><input type="checkbox" {...form.register('remember')} /> Remember me</label><Link to="/forgot-password">Forgot password?</Link></div>{mutation.error && <div className="form-alert">{mutation.error.message}</div>}<button className="button full" disabled={mutation.isPending} type="submit">{mutation.isPending ? 'Signing in…' : 'Sign in'} <LogIn size={16} /></button></form><p className="auth-switch">New here? <Link to="/register">Create an account</Link></p></div>
+}
+
+export function RegisterPage() {
+  const navigate = useNavigate()
+  const form = useForm<RegisterValues>({ resolver: zodResolver(registerSchema), defaultValues: { terms_accepted: false, privacy_accepted: false } })
+  const mutation = useMutation({ mutationFn: authService.register, onSuccess: () => navigate('/verify-email') })
+  return <div className="auth-card"><p className="eyebrow">Start with curiosity</p><h1>Create your account</h1><p className="muted">Your name and interests are enough to get started.</p><form onSubmit={form.handleSubmit((values) => mutation.mutate(values))}><label>Full name<input {...form.register('name')} placeholder="Your name" /><FieldError message={form.formState.errors.name?.message} /></label><label>Username<input {...form.register('username')} placeholder="your-handle" /><FieldError message={form.formState.errors.username?.message} /></label><label>Email address<input type="email" {...form.register('email')} placeholder="you@example.com" /><FieldError message={form.formState.errors.email?.message} /></label><label>Password<PasswordField register={form.register as UseFormRegister<Record<string, string | boolean>>} name="password" error={form.formState.errors.password?.message} /></label><label>Confirm password<input type="password" {...form.register('password_confirmation')} placeholder="Repeat your password" /><FieldError message={form.formState.errors.password_confirmation?.message} /></label><label className="check"><input type="checkbox" {...form.register('terms_accepted')} /> I accept the <Link to="/terms">Terms of Service</Link></label><FieldError message={form.formState.errors.terms_accepted?.message} /><label className="check"><input type="checkbox" {...form.register('privacy_accepted')} /> I accept the <Link to="/privacy">Privacy Policy</Link></label><FieldError message={form.formState.errors.privacy_accepted?.message} />{mutation.error && <div className="form-alert">{mutation.error.message}</div>}<button className="button full" disabled={mutation.isPending} type="submit">{mutation.isPending ? 'Creating account…' : 'Create account'} <Sparkles size={16} /></button></form><p className="auth-switch">Already a member? <Link to="/login">Sign in</Link></p></div>
+}
+
+export function ForgotPasswordPage() {
+  const form = useForm<{ email: string }>({ resolver: zodResolver(z.object({ email: z.string().email('Enter a valid email.') })) })
+  const mutation = useMutation({ mutationFn: (value: { email: string }) => authService.forgotPassword(value.email) })
+  return <div className="auth-card"><p className="eyebrow">Account recovery</p><h1>Reset your password</h1><p className="muted">We’ll send recovery instructions if an account exists for that email.</p>{mutation.isSuccess ? <div className="success-state">{mutation.data.message}</div> : <form onSubmit={form.handleSubmit((values) => mutation.mutate(values))}><label>Email address<input type="email" {...form.register('email')} placeholder="you@example.com" /><FieldError message={form.formState.errors.email?.message} /></label><button className="button full" disabled={mutation.isPending} type="submit">{mutation.isPending ? 'Sending…' : 'Send instructions'}</button></form>}<p className="auth-switch"><Link to="/login">Back to sign in</Link></p></div>
+}
+
+export function ResetPasswordPage() {
+  const [params] = useSearchParams()
+  const form = useForm<{ email: string; password: string; password_confirmation: string }>({ resolver: zodResolver(z.object({ email: z.string().email(), password, password_confirmation: z.string() })) })
+  const mutation = useMutation({ mutationFn: (value: { email: string; password: string; password_confirmation: string }) => authService.resetPassword({ ...value, token: params.get('token') ?? '' }) })
+  return <div className="auth-card"><p className="eyebrow">Choose a new password</p><h1>Reset your password</h1><form onSubmit={form.handleSubmit((values) => mutation.mutate(values))}><label>Email<input type="email" {...form.register('email')} /></label><label>New password<PasswordField register={form.register as UseFormRegister<Record<string, string | boolean>>} name="password" error={form.formState.errors.password?.message} /></label><label>Confirm password<input type="password" {...form.register('password_confirmation')} /></label>{mutation.error && <div className="form-alert">{mutation.error.message}</div>}{mutation.isSuccess && <div className="success-state">Password reset. You can sign in now.</div>}<button className="button full" type="submit">Reset password</button></form><p className="auth-switch"><Link to="/login">Back to sign in</Link></p></div>
+}
+
+export function VerifyEmailPage() { const mutation = useMutation({ mutationFn: authService.resendVerification }); return <div className="auth-card"><p className="eyebrow">One small step</p><h1>Verify your email</h1><p className="muted">Check your inbox for a verification link. You can request another one if needed.</p><button className="button full" onClick={() => mutation.mutate()} disabled={mutation.isPending}>{mutation.isPending ? 'Sending…' : 'Resend verification email'}</button>{mutation.data && <div className="success-state">{mutation.data.message}</div>}<p className="auth-switch"><Link to="/login">Return to sign in</Link></p></div> }
+export function VerifyResultPage() { const [params] = useSearchParams(); const success = params.get('status') === 'success'; return <div className="auth-card"><p className="eyebrow">Email verification</p><h1>{success ? 'Your email is verified.' : 'Verification link unavailable'}</h1><p className="muted">{success ? 'Your account is ready. Sign in to continue setting up your profile.' : 'The link may have expired. Sign in to request a new verification email.'}</p><Link className="button full" to="/login">Continue to sign in</Link></div> }
