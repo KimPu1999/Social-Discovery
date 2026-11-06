@@ -1,39 +1,86 @@
-import { useEffect, useState } from 'react'
-import { Link, NavLink, Outlet, Route, Routes } from 'react-router-dom'
-import { Bell, CalendarDays, ChevronDown, Compass, HeartHandshake, Home as HomeIcon, LogIn, Menu, MessageCircle, Moon, Search, Settings, ShieldCheck, Sparkles, Users, X } from 'lucide-react'
-import { useUiStore } from './stores/uiStore'
-import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage, VerifyEmailPage, VerifyResultPage } from './features/auth/AuthPages'
-import { ProfilePage } from './features/profile/ProfilePage'
-import { SettingsPage } from './features/settings/SettingsPage'
+import { lazy, Suspense, type ReactNode } from 'react'
+import { Navigate, Outlet, Route, Routes, useOutletContext } from 'react-router-dom'
+import { Bell, CalendarDays, Compass, HeartHandshake, MessageCircle, Settings, ShieldCheck, Sparkles, Users } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { authService } from './services/authService'
+import { AdminLayout, AuthLayout, MemberLayout, PublicLayout, ThemeSync } from './layouts/AppLayouts'
+import { HomePage, PublicInfoPage } from './pages/PublicPages'
+import { DashboardPage } from './pages/DashboardPage'
+import { PlaceholderPage } from './pages/PlaceholderPage'
 import './App.css'
+import './responsive.css'
 
-const navItems = [
-  ['Dashboard', '/', HomeIcon], ['Discover', '/discover', Compass], ['People', '/people', Users], ['Connections', '/connections', HeartHandshake], ['Feed', '/feed', Sparkles], ['Messages', '/messages', MessageCircle], ['Communities', '/communities', Users], ['Events', '/events', CalendarDays], ['Notifications', '/notifications', Bell], ['Profile', '/profile', Users], ['Settings', '/settings', Settings],
-] as const
+const LoginPage = lazy(() => import('./features/auth/AuthPages').then((module) => ({ default: module.LoginPage })))
+const RegisterPage = lazy(() => import('./features/auth/AuthPages').then((module) => ({ default: module.RegisterPage })))
+const ForgotPasswordPage = lazy(() => import('./features/auth/AuthPages').then((module) => ({ default: module.ForgotPasswordPage })))
+const ResetPasswordPage = lazy(() => import('./features/auth/AuthPages').then((module) => ({ default: module.ResetPasswordPage })))
+const VerifyEmailPage = lazy(() => import('./features/auth/AuthPages').then((module) => ({ default: module.VerifyEmailPage })))
+const VerifyResultPage = lazy(() => import('./features/auth/AuthPages').then((module) => ({ default: module.VerifyResultPage })))
+const ProfilePage = lazy(() => import('./features/profile/ProfilePage').then((module) => ({ default: module.ProfilePage })))
+const SettingsPage = lazy(() => import('./features/settings/SettingsPage').then((module) => ({ default: module.SettingsPage })))
 
-function PublicLayout() {
-  return <div className="public-layout"><header className="public-header"><Link className="brand" to="/"><span className="brand-mark"><Sparkles size={18} /></span> Social Discovery</Link><nav><Link to="/about">About</Link><Link to="/features">Features</Link><Link to="/contact">Contact</Link><Link className="button button-small" to="/login">Sign in <LogIn size={15} /></Link></nav></header><main><Outlet /></main><footer><span>© 2026 Social Discovery</span><span>Built for meaningful connections.</span></footer></div>
+function LoadingScreen() { return <div className="route-loading" role="status">Loading workspace…</div> }
+function Lazy({ children }: { children: ReactNode }) { return <Suspense fallback={<LoadingScreen />}>{children}</Suspense> }
+
+function ProtectedLayout({ roles }: { roles?: string[] }) {
+  const query = useQuery({ queryKey: ['me'], queryFn: authService.me, retry: false })
+  if (query.isLoading) return <LoadingScreen />
+  if (query.error || !query.data) return <Navigate to="/login" replace />
+  if (roles && !roles.includes(query.data.user.role)) return <PlaceholderPage title="Access restricted" description="Your account does not have permission to open this workspace." icon={ShieldCheck} />
+  return <Outlet context={query.data.user} />
 }
 
-function AuthLayout() {
-  return <div className="auth-layout"><div className="auth-aside"><Link className="brand" to="/"><span className="brand-mark"><Sparkles size={18} /></span> Social Discovery</Link><div><p className="eyebrow">A better way to belong</p><h1>Meet people around what matters to you.</h1><p className="muted">Discover communities, conversations, and experiences that feel like yours.</p></div><span className="aside-note">Private by design · Human at heart</span></div><main className="auth-content"><Outlet /></main></div>
+function MemberShell() { const user = useOutletContext<import('./types').User>(); return <MemberLayout user={user} /> }
+function AdminShell() { const user = useOutletContext<import('./types').User>(); return <AdminLayout user={user} /> }
+
+export default function App() {
+  return <><ThemeSync /><Routes>
+    <Route element={<PublicLayout />}>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/about" element={<PublicInfoPage title="About Social Discovery" description="A platform for finding community through shared interests and moving at a human pace." />} />
+      <Route path="/features" element={<PublicInfoPage title="Features" description="Explore the foundation we are building for thoughtful social discovery." />} />
+      <Route path="/explore" element={<PublicInfoPage title="Discover" description="Discovery will open up as people, interests, and communities become available." />} />
+      <Route path="/community-guide" element={<PublicInfoPage title="Communities" description="Community spaces will be introduced with clear guidelines and thoughtful moderation." />} />
+      <Route path="/event-guide" element={<PublicInfoPage title="Events" description="Events will help people gather around shared interests and experiences." />} />
+      <Route path="/contact" element={<PublicInfoPage title="Contact" description="A simple place to find support and share feedback." />} />
+      <Route path="/privacy" element={<PublicInfoPage title="Privacy Policy" description="Clear choices and respectful handling of personal data." />} />
+      <Route path="/terms" element={<PublicInfoPage title="Terms of Service" description="The shared expectations for participating here." />} />
+      <Route path="/guidelines" element={<PublicInfoPage title="Community Guidelines" description="Help make Social Discovery welcoming and safe." />} />
+    </Route>
+    <Route element={<AuthLayout />}>
+      <Route path="/login" element={<Lazy><LoginPage /></Lazy>} />
+      <Route path="/register" element={<Lazy><RegisterPage /></Lazy>} />
+      <Route path="/forgot-password" element={<Lazy><ForgotPasswordPage /></Lazy>} />
+      <Route path="/reset-password" element={<Lazy><ResetPasswordPage /></Lazy>} />
+      <Route path="/verify-email" element={<Lazy><VerifyEmailPage /></Lazy>} />
+      <Route path="/verify-email/result" element={<Lazy><VerifyResultPage /></Lazy>} />
+    </Route>
+    <Route element={<ProtectedLayout />}>
+      <Route element={<MemberShell />}>
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/discover" element={<PlaceholderPage title="Discover" description="Find people and communities through the interests you share." icon={Compass} />} />
+        <Route path="/people" element={<PlaceholderPage title="People" description="A thoughtful directory for meeting people with shared interests." icon={Users} />} />
+        <Route path="/connections" element={<PlaceholderPage title="Connections" description="Your growing circle, kept at your pace." icon={HeartHandshake} />} />
+        <Route path="/feed" element={<PlaceholderPage title="Feed" description="A future home for updates from your communities." icon={Sparkles} />} />
+        <Route path="/messages" element={<PlaceholderPage title="Messages" description="Private conversations are part of the next layer." icon={MessageCircle} />} />
+        <Route path="/communities" element={<PlaceholderPage title="Communities" description="Find spaces organized around the things you care about." icon={Users} />} />
+        <Route path="/events" element={<PlaceholderPage title="Events" description="Join gatherings, workshops, and shared experiences." icon={CalendarDays} />} />
+        <Route path="/notifications" element={<PlaceholderPage title="Notifications" description="Your relevant updates will appear here as the platform grows." icon={Bell} />} />
+        <Route path="/profile" element={<Lazy><ProfilePage /></Lazy>} />
+        <Route path="/settings" element={<Lazy><SettingsPage /></Lazy>} />
+      </Route>
+    </Route>
+    <Route element={<ProtectedLayout roles={['super_admin']} />}>
+      <Route path="/admin" element={<AdminShell />}>
+        <Route index element={<Navigate to="overview" replace />} />
+        <Route path="overview" element={<PlaceholderPage title="Admin overview" description="A protected workspace for platform health and stewardship." icon={ShieldCheck} />} />
+        <Route path="users" element={<PlaceholderPage title="User management" description="Review account status with documented administrative access." icon={Users} />} />
+        <Route path="moderation" element={<PlaceholderPage title="Content moderation" description="A protected workspace for community care and safety." icon={ShieldCheck} />} />
+        <Route path="reports" element={<PlaceholderPage title="Reports" description="Review reports and record accountable outcomes." icon={Bell} />} />
+        <Route path="settings" element={<PlaceholderPage title="Platform settings" description="Manage system defaults and operational controls." icon={Settings} />} />
+      </Route>
+    </Route>
+    <Route element={<ProtectedLayout roles={['moderator', 'super_admin']} />}><Route path="/moderator/overview" element={<PlaceholderPage title="Moderation workspace" description="A restricted workspace for reviewing community reports." icon={ShieldCheck} />} /></Route>
+    <Route path="*" element={<Navigate to="/" replace />} />
+  </Routes></>
 }
-
-function AppLayout() {
-  const { sidebarOpen, toggleSidebar, theme, setTheme } = useUiStore(); const [mobileOpen, setMobileOpen] = useState(false)
-  useEffect(() => { document.documentElement.dataset.theme = theme === 'dark' ? 'dark' : 'light' }, [theme])
-  return <div className="app-shell"><aside className={`sidebar ${sidebarOpen ? '' : 'collapsed'} ${mobileOpen ? 'mobile-open' : ''}`}><div className="sidebar-top"><Link className="brand" to="/"><span className="brand-mark"><Sparkles size={18} /></span>{sidebarOpen && 'Social Discovery'}</Link><button className="icon-button mobile-close" onClick={() => setMobileOpen(false)} aria-label="Close menu"><X size={20} /></button></div><nav className="side-nav">{navItems.map(([label, path, Icon]) => <NavLink key={path} to={path} end={path === '/'} onClick={() => setMobileOpen(false)} className={({ isActive }) => isActive ? 'active' : ''}><Icon size={18} /><span>{sidebarOpen && label}</span></NavLink>)}</nav><div className="sidebar-footer">{sidebarOpen && <div className="user-mini"><span className="avatar avatar-small">KS</span><div><strong>Kim Smith</strong><small>Member</small></div></div>}<button className="icon-button" onClick={toggleSidebar} aria-label="Toggle sidebar"><Menu size={18} /></button></div></aside><div className="app-main"><header className="topbar"><button className="icon-button mobile-menu" onClick={() => setMobileOpen(true)} aria-label="Open menu"><Menu size={20} /></button><button className="sidebar-toggle icon-button" onClick={toggleSidebar} aria-label="Toggle sidebar"><Menu size={20} /></button><label className="search"><Search size={17} /><input placeholder="Search people, communities, or events" /></label><div className="top-actions"><button className="icon-button" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label="Toggle theme"><Moon size={18} /></button><button className="icon-button"><Bell size={19} /><i /></button><button className="icon-button"><MessageCircle size={19} /></button><button className="profile-chip"><span className="avatar avatar-small">KS</span><ChevronDown size={15} /></button></div></header><main className="workspace"><Outlet /></main></div></div>
-}
-
-function Page({ title, description, icon: Icon = Compass }: { title: string; description: string; icon?: typeof Compass }) { return <section className="page"><div className="page-heading"><div><p className="eyebrow">Workspace</p><h1>{title}</h1><p className="muted">{description}</p></div><span className="heading-icon"><Icon size={24} /></span></div><div className="empty-state"><span className="empty-icon"><Icon size={25} /></span><h2>Ready for the next layer</h2><p>This Phase 1 surface is wired for navigation and future API modules. Live functionality will be added in the next development phase.</p></div></section> }
-
-function Home() { return <section className="hero-page"><div className="hero-copy"><p className="eyebrow">Social discovery, with more intention</p><h1>Find the people who make your world feel bigger.</h1><p className="hero-text">A calm place to discover shared interests, join welcoming communities, and build connections that go beyond a follow.</p><div className="hero-actions"><Link className="button" to="/register">Create your space <Sparkles size={16} /></Link><Link className="text-link" to="/features">Explore how it works <span>→</span></Link></div><div className="trust-row"><span><ShieldCheck size={15} /> Privacy first</span><span><Users size={15} /> Interest led</span><span><HeartHandshake size={15} /> Human paced</span></div></div><div className="hero-art"><div className="orbit orbit-one" /><div className="orbit orbit-two" /><div className="hero-card card-main"><span className="avatar avatar-large">AM</span><div><strong>Alex Morgan</strong><small>Urban gardening · 12 shared interests</small></div><span className="match">92%</span></div><div className="hero-card card-float"><span className="mini-icon"><MessageCircle size={16} /></span><div><strong>A new conversation</strong><small>Starts with something in common.</small></div></div></div></section> }
-
-function AdminOverview() { return <Page title="Admin overview" description="A protected workspace for platform health and stewardship." icon={ShieldCheck} /> }
-function AdminLayout() { return <Outlet /> }
-function ProtectedLayout({ roles }: { roles?: string[] }) { const query = useQuery({ queryKey: ['me'], queryFn: authService.me, retry: false }); if (query.isLoading) return <div className="loading-state">Checking your session…</div>; if (query.error) { window.location.assign('/login'); return null } if (!query.data) return <div className="loading-state">Checking your session…</div>; if (roles && !roles.includes(query.data.user.role)) { return <Page title="Access restricted" description="Your account does not have permission to open this workspace." icon={ShieldCheck} /> } return <AppLayout /> }
-function Dashboard() { return <section className="page"><div className="page-heading"><div><p className="eyebrow">Thursday, November 6</p><h1>Good morning, Kim.</h1><p className="muted">A little room to explore, connect, and follow your curiosity.</p></div><button className="button button-light"><Sparkles size={16} /> Personalize</button></div><div className="stat-grid"><div className="stat-card"><span className="stat-label">Your interests</span><strong>12</strong><small>Start with what feels like you</small></div><div className="stat-card"><span className="stat-label">Communities</span><strong>0</strong><small>Places to find your people</small></div><div className="stat-card accent"><span className="stat-label">Discovery status</span><strong>Ready</strong><small>Your profile is ready to shape</small></div></div><div className="dashboard-grid"><div className="panel panel-large"><div className="panel-title"><div><span className="eyebrow">A gentle start</span><h2>Complete your profile</h2></div><span className="progress">0%</span></div><div className="progress-track"><span /></div><p className="muted">Add a few interests and a short introduction so your future recommendations feel more relevant.</p><Link className="text-link" to="/profile">Open profile <span>→</span></Link></div><div className="panel"><div className="panel-title"><div><span className="eyebrow">Coming next</span><h2>Explore together</h2></div><Compass size={20} className="muted" /></div><ul className="feature-list"><li><span className="mini-icon"><Users size={15} /></span><div><strong>Discover people</strong><small>Based on shared interests</small></div></li><li><span className="mini-icon"><CalendarDays size={15} /></span><div><strong>Find events</strong><small>Gather around what matters</small></div></li></ul></div></div></section> }
-
-export default function App() { return <Routes><Route element={<PublicLayout />}><Route path="/" element={<Home />} /><Route path="/about" element={<Page title="About Social Discovery" description="A platform for finding community through shared interests." />} /><Route path="/features" element={<Page title="Features" description="Explore the foundation we are building for thoughtful social discovery." />} /><Route path="/contact" element={<Page title="Contact" description="A simple place to find support and share feedback." />} /><Route path="/privacy" element={<Page title="Privacy Policy" description="Clear choices and respectful handling of personal data." />} /><Route path="/terms" element={<Page title="Terms of Service" description="The shared expectations for participating here." />} /><Route path="/guidelines" element={<Page title="Community Guidelines" description="Help make Social Discovery welcoming and safe." />} /></Route><Route element={<AuthLayout />}><Route path="/login" element={<LoginPage />} /><Route path="/register" element={<RegisterPage />} /><Route path="/forgot-password" element={<ForgotPasswordPage />} /><Route path="/reset-password" element={<ResetPasswordPage />} /><Route path="/verify-email" element={<VerifyEmailPage />} /><Route path="/verify-email/result" element={<VerifyResultPage />} /></Route><Route element={<ProtectedLayout />}><Route path="/dashboard" element={<Dashboard />} /><Route path="/discover" element={<Page title="Discover" description="Find people and communities through the interests you share." />} /><Route path="/people" element={<Page title="People" description="A thoughtful directory for meeting people with shared interests." icon={Users} />} /><Route path="/connections" element={<Page title="Connections" description="Your growing circle, kept at your pace." icon={HeartHandshake} />} /><Route path="/feed" element={<Page title="Feed" description="A future home for updates from your communities." icon={Sparkles} />} /><Route path="/messages" element={<Page title="Messages" description="Private conversations are part of the next layer." icon={MessageCircle} />} /><Route path="/communities" element={<Page title="Communities" description="Find spaces organized around the things you care about." icon={Users} />} /><Route path="/events" element={<Page title="Events" description="Join gatherings, workshops, and shared experiences." icon={CalendarDays} />} /><Route path="/profile" element={<ProfilePage />} /><Route path="/settings" element={<SettingsPage />} /></Route><Route element={<ProtectedLayout roles={['super_admin']} />}><Route path="/admin" element={<AdminLayout />}><Route index element={<AdminOverview />} /><Route path="overview" element={<AdminOverview />} /><Route path="users" element={<Page title="User management" description="Review account status with documented administrative access." icon={ShieldCheck} />} /><Route path="moderation" element={<Page title="Content moderation" description="A protected workspace for community care and safety." />} /><Route path="reports" element={<Page title="Reports" description="Review reports and record accountable outcomes." />} /><Route path="settings" element={<Page title="Platform settings" description="Manage system defaults and operational controls." icon={Settings} />} /></Route></Route><Route element={<ProtectedLayout roles={['moderator', 'super_admin']} />}><Route path="/moderator/overview" element={<Page title="Moderation workspace" description="A restricted workspace for reviewing community reports." icon={ShieldCheck} />} /></Route></Routes> }
