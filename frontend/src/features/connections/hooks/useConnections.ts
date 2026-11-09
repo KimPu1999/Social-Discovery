@@ -11,6 +11,7 @@ export const connectionsKeys = {
   following: (userId: number, params: SocialListParams) => [...connectionsKeys.all, 'following', userId, params] as const,
   mutual: (userId: number) => [...connectionsKeys.all, 'mutual', userId] as const,
   myConnections: (params: SocialListParams) => [...connectionsKeys.all, 'mine', params] as const,
+  suggestions: (params: SocialListParams) => [...connectionsKeys.all, 'suggestions', params] as const,
   userConnections: (userId: number, params: SocialListParams) => [...connectionsKeys.all, 'user', userId, params] as const,
   incoming: (params: SocialListParams) => [...connectionsKeys.all, 'incoming', params] as const,
   outgoing: (params: SocialListParams) => [...connectionsKeys.all, 'outgoing', params] as const,
@@ -119,6 +120,10 @@ export function useFollowing(userId: number, params: SocialListParams, enabled =
 
 export function useMyConnections(params: SocialListParams) {
   return useQuery({ queryKey: connectionsKeys.myConnections(params), queryFn: () => connectionsApi.myConnections({ params }), placeholderData: keepPreviousData, staleTime: 10_000 })
+}
+
+export function useConnectionSuggestions(params: SocialListParams) {
+  return useQuery({ queryKey: connectionsKeys.suggestions(params), queryFn: () => connectionsApi.suggestions({ params }), placeholderData: keepPreviousData, staleTime: 15_000 })
 }
 
 export function useUserConnections(userId: number, params: SocialListParams) {

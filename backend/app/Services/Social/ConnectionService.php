@@ -25,7 +25,7 @@ class ConnectionService
     /**
      * The viewer's own connection list, paginated and searchable.
      *
-     * @param  array{page?: int, per_page?: int, search?: string}  $params
+     * @param  array{page?: int, per_page?: int, search?: string, sort?: string}  $params
      * @return array{data: array, meta: array}
      */
     public function listFor(User $owner, array $params): array
@@ -39,7 +39,7 @@ class ConnectionService
      * A user's accepted connection list as visible to the viewer. Private
      * or hidden lists disclose nothing but an empty page (no enumeration).
      *
-     * @param  array{page?: int, per_page?: int, search?: string}  $params
+     * @param  array{page?: int, per_page?: int, search?: string, sort?: string}  $params
      * @return array{data: array, meta: array, relationship: array<string, bool|string>|null}
      */
     public function listVisibleTo(User $viewer, User $target, array $params): array
@@ -103,7 +103,7 @@ class ConnectionService
      * Paginated connection rows for one account, batched hydration and
      * per-row relationship state relative to the acting viewer.
      *
-     * @param  array{page?: int, per_page?: int, search?: string}  $params
+     * @param  array{page?: int, per_page?: int, search?: string, sort?: string}  $params
      * @return array{data: array, meta: array}
      */
     private function connectionList(User $owner, array $params): array
@@ -142,8 +142,15 @@ class ConnectionService
             });
         }
 
-        // Deterministic: newest connection first, then pair id.
-        $page = $query->orderByDesc('connections.connected_at')->orderBy('connections.id')
+        // Deterministic ordering is selected server-side so the total and
+        // pagination remain correct for every sort mode.
+        if (($params['sort'] ?? 'newest') === 'name') {
+            $query->orderByRaw('lower(coalesce(peer_profiles.display_name, peers.name))')->orderBy('peer_profiles.username')->orderBy('connections.id');
+        } else {
+            $query->orderByDesc('connections.connected_at')->orderBy('connections.id');
+        }
+
+        $page = $query
             ->paginate($params['per_page'] ?? self::PER_PAGE_DEFAULT, $columns, 'page', max($params['page'] ?? 1, 1));
 
         // One batched hydration of peers + one batched relationship map.

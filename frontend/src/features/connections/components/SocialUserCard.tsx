@@ -37,7 +37,10 @@ export function SocialUserCard({ user, caption, relationship, actions, compact =
           </p>
         ) : null}
       </div>
-      {actions ? <div className="social-row-actions">{actions}</div> : null}
+      {actions ? <div className="social-row-actions">
+        {path ? <Link className="ui-button ui-button-secondary ui-button-sm social-row-profile" to={path}>{t.social.viewProfile}</Link> : null}
+        {actions}
+      </div> : null}
     </article>
   )
 }

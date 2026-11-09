@@ -90,8 +90,9 @@ export type SocialNotification = {
 export type NotificationPage = { data: SocialNotification[]; meta: SocialPageMeta; unread_count: number }
 
 /** Params accepted by paginated list endpoints. */
-export type SocialListParams = { page?: number; per_page?: number; search?: string }
+export type ConnectionSort = 'newest' | 'name'
+export type SocialListParams = { page?: number; per_page?: number; search?: string; sort?: ConnectionSort }
 
 /** Tabs of the /connections workspace; preserved through the `tab` URL param. */
-export const CONNECTION_TABS = ['connections', 'incoming', 'outgoing', 'followers', 'following', 'blocked'] as const
+export const CONNECTION_TABS = ['connections', 'incoming', 'outgoing', 'suggestions', 'followers', 'following', 'blocked'] as const
 export type ConnectionTab = (typeof CONNECTION_TABS)[number]

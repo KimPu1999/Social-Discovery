@@ -3,21 +3,25 @@ import { Avatar, Button, useToast } from '../../../components/ui'
 import { formatLocaleDate } from '../../../i18n'
 import { useRequestResponse } from '../hooks/useConnections'
 import type { IncomingRequest, OutgoingRequest } from '../types'
+import { Link } from 'react-router-dom'
 
 /** Shared row shell for both request directions. */
 function RequestShell({ name, username, avatar, sentAt, actions }: { name: string; username: string | null; avatar?: string | null; sentAt: string | null; actions: React.ReactNode }) {
-  const { locale } = useTranslation()
+  const { locale, t } = useTranslation()
   return (
     <article className="social-row">
       <Avatar name={name} src={avatar ?? undefined} />
       <div className="social-row-id">
-        <h3 className="social-row-name">{name}</h3>
+        <h3 className="social-row-name">{username ? <Link to={`/people/${username}`}>{name}</Link> : name}</h3>
         <p className="social-row-username">
           {username ? `@${username}` : ''}
           {sentAt ? ` · ${formatLocaleDate(sentAt, locale)}` : ''}
         </p>
       </div>
-      <div className="social-row-actions">{actions}</div>
+      <div className="social-row-actions">
+        {username ? <Link className="ui-button ui-button-secondary ui-button-sm social-row-profile" to={`/people/${username}`}>{t.social.viewProfile}</Link> : null}
+        {actions}
+      </div>
     </article>
   )
 }

@@ -13,6 +13,7 @@ import type {
   SocialPageMeta,
   SocialNotification,
 } from '../types'
+import type { DiscoveryProfile } from '../../discovery/types'
 
 type ListParams = { params?: SocialListParams }
 
@@ -94,6 +95,11 @@ export const connectionsApi = {
   // ----- Connections -----
   async myConnections({ params = {} }: ListParams = {}) {
     const { data } = await api.get<{ data: ConnectionRow[]; meta: SocialPageMeta }>('/connections', { params })
+    return data
+  },
+
+  async suggestions({ params = {} }: ListParams = {}) {
+    const { data } = await api.get<{ data: DiscoveryProfile[]; meta: SocialPageMeta }>('/connections/suggestions', { params })
     return data
   },
 

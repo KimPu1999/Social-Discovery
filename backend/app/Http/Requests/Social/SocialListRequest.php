@@ -21,6 +21,7 @@ class SocialListRequest extends FormRequest
             'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', Rule::in([5, 10, 20, 50])],
             'search' => ['nullable', 'string', 'max:120'],
+            'sort' => ['nullable', Rule::in(['newest', 'name'])],
         ];
     }
 
@@ -32,6 +33,7 @@ class SocialListRequest extends FormRequest
             'page' => max((int) ($validated['page'] ?? 1), 1),
             'per_page' => (int) ($validated['per_page'] ?? 10),
             'search' => isset($validated['search']) ? (string) $validated['search'] : null,
+            'sort' => (string) ($validated['sort'] ?? 'newest'),
         ];
     }
 }

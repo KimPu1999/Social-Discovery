@@ -178,7 +178,7 @@ class ConnectionRequestService
     }
 
     /**
-     * @param  array{page?: int, per_page?: int}  $params
+     * @param  array{page?: int, per_page?: int, search?: string, sort?: string}  $params
      * @return array{data: array, meta: array}
      */
     private function requestList(User $actor, string $side, array $params): array
@@ -194,8 +194,22 @@ class ConnectionRequestService
             ->join('user_profiles as request_profiles', 'request_profiles.user_id', '=', "connection_requests.{$otherSide}")
             ->select(array_merge($columns, ['request_profiles.display_name', 'request_profiles.username as profile_username', 'request_profiles.avatar_path']))
             ->where("connection_requests.{$side}_id", $actor->getKey())
-            ->where('connection_requests.status', ConnectionRequestStatus::Pending->value)
-            ->orderBy('connection_requests.id', $side === 'receiver' ? 'asc' : 'desc');
+            ->where('connection_requests.status', ConnectionRequestStatus::Pending->value);
+
+        $term = trim((string) ($params['search'] ?? ''));
+        if ($term !== '') {
+            $like = str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], mb_strtolower($term)).'%';
+            $query->where(static function ($sub) use ($like, $otherAlias): void {
+                $sub->whereRaw("lower(coalesce(request_profiles.display_name, {$otherAlias}.name)) like ?", [$like])
+                    ->orWhereRaw('lower(request_profiles.username) like ?', [$like]);
+            });
+        }
+
+        if (($params['sort'] ?? 'newest') === 'name') {
+            $query->orderByRaw("lower(coalesce(request_profiles.display_name, {$otherAlias}.name))")->orderBy('request_profiles.username')->orderBy('connection_requests.id');
+        } else {
+            $query->orderBy('connection_requests.id', $side === 'receiver' ? 'asc' : 'desc');
+        }
 
         $page = $query->paginate($params['per_page'] ?? 10, $columns, 'page', max($params['page'] ?? 1, 1));
 

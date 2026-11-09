@@ -7,6 +7,7 @@ use App\Models\Interest;
 use App\Models\User;
 use App\Models\UserProfile;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -67,6 +68,70 @@ class DiscoveryService
 
         $page = $query->paginate($filters['per_page'] ?? 10, ['users.*'], 'page', max($filters['page'] ?? 1, 1));
 
+        $this->attachMatchSummary($page->getCollection(), $viewer, $viewerInterestIds);
+
+        return $page;
+    }
+
+    /**
+     * Eligible people who are not already connected and do not have an
+     * outstanding request in either direction. This is intentionally a
+     * separate query from the general explorer so the Connections page can
+     * promise actionable suggestions without filtering after pagination.
+     *
+     * @param  array{search?: string, sort?: string, per_page?: int, page?: int}  $filters
+     */
+    public function suggestions(User $viewer, array $filters): LengthAwarePaginator
+    {
+        $viewerInterestIds = RecommendationService::viewerInterestIds($viewer);
+        $query = $this->eligibility->eligibleQuery($viewer)->with('profile');
+
+        $query->whereNotExists(static function (QueryBuilder $sub) use ($viewer): void {
+            $sub->selectRaw(1)->from('user_connections as suggestion_connections')
+                ->where(static function (QueryBuilder $pair) use ($viewer): void {
+                    $pair->where(static function (QueryBuilder $forward) use ($viewer): void {
+                        $forward->where('suggestion_connections.user_one_id', $viewer->getKey())
+                            ->whereColumn('suggestion_connections.user_two_id', 'users.id');
+                    })->orWhere(static function (QueryBuilder $reverse) use ($viewer): void {
+                        $reverse->whereColumn('suggestion_connections.user_one_id', 'users.id')
+                            ->where('suggestion_connections.user_two_id', $viewer->getKey());
+                    });
+                });
+        });
+
+        $query->whereNotExists(static function (QueryBuilder $sub) use ($viewer): void {
+            $sub->selectRaw(1)->from('connection_requests as suggestion_requests')
+                ->where('suggestion_requests.status', 'pending')
+                ->where(static function (QueryBuilder $pair) use ($viewer): void {
+                    $pair->where(static function (QueryBuilder $forward) use ($viewer): void {
+                        $forward->where('suggestion_requests.sender_id', $viewer->getKey())
+                            ->whereColumn('suggestion_requests.receiver_id', 'users.id');
+                    })->orWhere(static function (QueryBuilder $reverse) use ($viewer): void {
+                        $reverse->whereColumn('suggestion_requests.sender_id', 'users.id')
+                            ->where('suggestion_requests.receiver_id', $viewer->getKey());
+                    });
+                });
+        });
+
+        if (! empty($filters['search'])) {
+            $term = trim((string) $filters['search']);
+            $like = str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], mb_strtolower($term)).'%';
+            $containsLike = '%'.strtr(mb_strtolower($term), ['\\' => '\\\\', '%' => '\\%', '_' => '\\_']).'%';
+            $query->where(static function ($sub) use ($like, $containsLike): void {
+                $sub->whereRaw('lower(up.display_name) like ?', [$like])
+                    ->orWhereRaw('lower(up.username) like ?', [$like])
+                    ->orWhereRaw("lower(coalesce(up.bio, '')) like ?", [$containsLike]);
+            });
+        }
+
+        if (($filters['sort'] ?? 'newest') === 'name') {
+            $query->orderBy('up.display_name')->orderBy('up.username');
+        } else {
+            $query->orderByDesc('users.created_at');
+        }
+        $query->orderBy('users.id');
+
+        $page = $query->paginate($filters['per_page'] ?? 10, ['users.*'], 'page', max($filters['page'] ?? 1, 1));
         $this->attachMatchSummary($page->getCollection(), $viewer, $viewerInterestIds);
 
         return $page;

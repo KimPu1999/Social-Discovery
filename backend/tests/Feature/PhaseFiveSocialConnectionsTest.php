@@ -159,6 +159,29 @@ class PhaseFiveSocialConnectionsTest extends TestCase
         $this->assertSame($sender->id, $incoming->json('data.0.sender.id'));
     }
 
+    public function test_suggestions_exclude_connections_and_pending_requests(): void
+    {
+        $viewer = $this->member(['name' => 'Viewer']);
+        $connected = $this->member(['name' => 'Connected']);
+        $pending = $this->member(['name' => 'Pending']);
+        $suggested = $this->member(['name' => 'Suggested']);
+
+        UserConnection::query()->create([
+            'user_one_id' => min($viewer->id, $connected->id),
+            'user_two_id' => max($viewer->id, $connected->id),
+            'connected_at' => now(),
+        ]);
+        $this->actingAs($viewer)->postJson('/api/v1/connections/requests', ['receiver_id' => $pending->id])->assertCreated();
+
+        $response = $this->actingAs($viewer)->getJson('/api/v1/connections/suggestions?sort=name&per_page=50');
+
+        $response->assertOk();
+        $usernames = $response->json('data.*.username');
+        $this->assertContains($suggested->profile->username, $usernames);
+        $this->assertNotContains($connected->profile->username, $usernames);
+        $this->assertNotContains($pending->profile->username, $usernames);
+    }
+
     public function test_10_duplicate_and_reverse_duplicate_requests_are_rejected(): void
     {
         [$sender, $receiver] = [$this->member(['name' => 'Ada']), $this->member(['name' => 'Brat'])];

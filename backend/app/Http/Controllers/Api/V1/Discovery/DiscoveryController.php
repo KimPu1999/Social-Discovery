@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Discovery;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Discovery\DiscoverPeopleRequest;
+use App\Http\Requests\Social\SocialListRequest;
 use App\Http\Resources\Discovery\DiscoveryInterestResource;
 use App\Http\Resources\Discovery\DiscoveryProfileDetailResource;
 use App\Http\Resources\Discovery\DiscoveryProfileResource;
@@ -64,6 +65,23 @@ class DiscoveryController extends Controller
             static fn (array $entry): array => DiscoveryProfileResource::make($entry['user'])->resolve(),
             $recommendations,
         )]);
+    }
+
+    /** GET /connections/suggestions — actionable, relationship-safe suggestions. */
+    public function suggestions(SocialListRequest $request): JsonResponse
+    {
+        $page = $this->discovery->suggestions($request->user(), $request->validatedRange());
+        $this->attachRelationships($request->user(), collect($page->items()));
+
+        return response()->json([
+            'data' => DiscoveryProfileResource::collection($page->items())->resolve(),
+            'meta' => [
+                'current_page' => $page->currentPage(),
+                'last_page' => $page->lastPage(),
+                'per_page' => $page->perPage(),
+                'total' => $page->total(),
+            ],
+        ]);
     }
 
     /** GET /discovery/interests — active interests grouped by category with real counts. */

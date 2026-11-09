@@ -68,7 +68,7 @@ class FollowService
      * Deterministic order, search over display name and handle, per-row
      * relationship state in one batched query.
      *
-     * @param  array{page?: int, per_page?: int, search?: string}  $params
+     * @param  array{page?: int, per_page?: int, search?: string, sort?: string}  $params
      * @return array{data: array, meta: array{current_page: int, last_page: int, per_page: int, total: int}, relationship: array<string, bool|string>|null}
      */
     public function followers(User $viewer, User $target, array $params): array
@@ -126,8 +126,13 @@ class FollowService
             });
         }
 
-        // Deterministic ordering: newest edge first, id as tiebreaker.
-        $page = $query->orderByDesc('edges.id')->paginate($params['per_page'] ?? 10, $columns, 'page', max($params['page'] ?? 1, 1));
+        if (($params['sort'] ?? 'newest') === 'name') {
+            $query->orderByRaw('lower(coalesce(edge_profiles.display_name, edge_users.name))')->orderBy('edge_profiles.username')->orderBy('edges.id');
+        } else {
+            $query->orderByDesc('edges.id')->orderBy('edges.following_id');
+        }
+
+        $page = $query->paginate($params['per_page'] ?? 10, $columns, 'page', max($params['page'] ?? 1, 1));
 
         // One batched hydration + one batched relationship map (no N+1).
         $rowUsers = User::query()->with(['profile', 'privacySettings'])->whereIn('users.id', collect($page->items())->pluck('row_user_id'))->get()->keyBy(static fn (User $user): int => (int) $user->getKey());

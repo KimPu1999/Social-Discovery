@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useDeferredValue, useState } from 'react'
 import { useOutletContext, useSearchParams } from 'react-router-dom'
-import { Search, UserMinus, Undo2 } from 'lucide-react'
+import { Search, UserMinus, Undo2, UsersRound, Inbox, Send, ArrowDownAZ } from 'lucide-react'
 import { useTranslation } from '../../../layouts/AppLayouts'
 import { Avatar, Badge, Button, Card, CardHeader, EmptyState, ErrorState, Pagination, Skeleton, Tabs, useToast, ConfirmDialog } from '../../../components/ui'
 import { formatLocaleDate, interpolate } from '../../../i18n'
@@ -10,15 +10,18 @@ import {
   useFollowing,
   useIncomingRequests,
   useMyConnections,
+  useConnectionSuggestions,
   useOutgoingRequests,
   useRemoveConnection,
   useBlockActions,
 } from '../hooks/useConnections'
 import { ConnectionStatusBadge } from '../components/ConnectionStatusBadge'
+import { ConnectionRequestButton } from '../components/ConnectionRequestButton'
 import { FollowButton } from '../components/FollowButton'
 import { SocialUserCard } from '../components/SocialUserCard'
 import { IncomingRequestCard, OutgoingRequestCard } from '../components/RequestCards'
-import { CONNECTION_TABS, type ConnectionTab, type SocialListParams } from '../types'
+import { DiscoveryProfileCard } from '../../discovery/components/DiscoveryProfileCard'
+import { CONNECTION_TABS, type ConnectionSort, type ConnectionTab, type SocialListParams } from '../types'
 
 const PER_PAGE_OPTIONS = [5, 10, 20, 50] as const
 
@@ -27,15 +30,40 @@ function isConnectionTab(value: string): value is ConnectionTab {
 }
 
 /** Shared per-tab list state so every tab keeps its own page/page size. */
-function useListState() {
-  const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(10)
-  const [search, setSearch] = useState('')
-  const params: SocialListParams = { page, per_page: perPage, ...(search.trim() ? { search: search.trim() } : {}) }
+function useListState(tab: ConnectionTab) {
+  const [urlParams, setUrlParams] = useSearchParams()
+  const page = Math.max(Number(urlParams.get('page') || 1), 1)
+  const requestedPerPage = Number(urlParams.get('per_page') || 10)
+  const perPage = [5, 10, 20, 50].includes(requestedPerPage) ? requestedPerPage : 10
+  const search = urlParams.get('q') ?? ''
+  const sort: ConnectionSort = urlParams.get('sort') === 'name' ? 'name' : 'newest'
+  const deferredSearch = useDeferredValue(search)
+  const params: SocialListParams = {
+    page,
+    per_page: perPage,
+    sort,
+    ...(deferredSearch.trim() ? { search: deferredSearch.trim() } : {}),
+  }
 
-  const onPaging = (nextPage: number, nextPerPage: number) => { setPage(nextPage); setPerPage(nextPerPage) }
+  const sync = (updates: { page?: number; per_page?: number; q?: string; sort?: ConnectionSort }) => {
+    setUrlParams((current) => {
+      const next = new URLSearchParams(current)
+      if (updates.page && updates.page > 1) next.set('page', String(updates.page)); else next.delete('page')
+      if (updates.per_page && updates.per_page !== 10) next.set('per_page', String(updates.per_page)); else next.delete('per_page')
+      if (updates.q?.trim()) next.set('q', updates.q.trim()); else next.delete('q')
+      if (updates.sort && updates.sort !== 'newest') next.set('sort', updates.sort); else next.delete('sort')
+      if (tab !== 'connections') next.set('tab', tab); else next.delete('tab')
+      return next
+    }, { replace: true })
+  }
 
-  return { page, perPage, search, params, setSearch, onPaging }
+  const onSearch = (value: string) => { sync({ page: 1, per_page: perPage, q: value, sort }) }
+  const onSort = (value: ConnectionSort) => { sync({ page: 1, per_page: perPage, q: search, sort: value }) }
+  const onPaging = (nextPage: number, nextPerPage: number) => {
+    sync({ page: nextPage, per_page: nextPerPage, q: search, sort })
+  }
+
+  return { page, perPage, search, sort, params, onSearch, onSort, onPaging }
 }
 
 /**
@@ -49,9 +77,20 @@ export function ConnectionsPage() {
   const rawTab = searchParams.get('tab') ?? 'connections'
   const tab: ConnectionTab = isConnectionTab(rawTab) ? rawTab : 'connections'
   const incoming = useIncomingRequests({ page: 1, per_page: 1 })
+  const overviewConnections = useMyConnections({ page: 1, per_page: 1 })
+  const overviewOutgoing = useOutgoingRequests({ page: 1, per_page: 1 })
   const pendingCount = incoming.data?.meta.total ?? 0
+  const totalConnections = overviewConnections.data?.meta.total ?? 0
+  const sentCount = overviewOutgoing.data?.meta.total ?? 0
 
-  const changeTab = (next: string) => setSearchParams(next === 'connections' ? {} : { tab: next })
+  const changeTab = (next: string) => setSearchParams((current) => {
+    const nextParams = new URLSearchParams(current)
+    if (next === 'connections') nextParams.delete('tab'); else nextParams.set('tab', next)
+    // Keep search/sort/page size useful across tabs, but never carry a page
+    // number that may be beyond the next tab's total.
+    nextParams.delete('page')
+    return nextParams
+  })
 
   return (
     <div className="page connections-page" data-testid="connections-page">
@@ -62,6 +101,12 @@ export function ConnectionsPage() {
       />
       <p className="page-copy">{t.connections.intro}</p>
 
+      <section className="connections-overview" aria-label={t.connections.overviewLabel}>
+        <div className="connections-stat"><UsersRound size={17} aria-hidden="true" /><span>{t.connections.stats.connections}</span><strong>{totalConnections}</strong></div>
+        <div className="connections-stat"><Inbox size={17} aria-hidden="true" /><span>{t.connections.stats.incoming}</span><strong>{pendingCount}</strong></div>
+        <div className="connections-stat"><Send size={17} aria-hidden="true" /><span>{t.connections.stats.outgoing}</span><strong>{sentCount}</strong></div>
+      </section>
+
       <Tabs
         label={t.connections.tabsLabel}
         items={CONNECTION_TABS.map((id) => ({ id, label: t.connections.tabs[id] }))}
@@ -71,6 +116,7 @@ export function ConnectionsPage() {
 
       {tab === 'incoming' ? <IncomingRequestsTab /> : null}
       {tab === 'outgoing' ? <OutgoingRequestsTab /> : null}
+      {tab === 'suggestions' ? <SuggestionsTab /> : null}
       {tab === 'connections' ? <MyConnectionsTab /> : null}
       {tab === 'followers' ? <EdgesTab mode="followers" /> : null}
       {tab === 'following' ? <EdgesTab mode="following" /> : null}
@@ -81,17 +127,20 @@ export function ConnectionsPage() {
 
 /** Shared chrome (toolbar, states, pagination) around each tab's list. */
 function ListFrame({
-  meta, loading, error, search, onSearch, onRetry, onPaging, children, testId,
+  meta, loading, error, search, sort, onSearch, onSort, onRetry, onPaging, children, testId, grid = false,
 }: {
   meta?: { current_page: number; last_page: number; per_page: number; total: number }
   loading: boolean
   error: boolean
   search: string
   onSearch: (value: string) => void
+  sort: ConnectionSort
+  onSort: (value: ConnectionSort) => void
   onRetry: () => void
   onPaging: (page: number, perPage: number) => void
   children: React.ReactNode
   testId: string
+  grid?: boolean
 }) {
   const { t } = useTranslation()
 
@@ -109,13 +158,23 @@ function ListFrame({
             onChange={(event) => { onSearch(event.target.value) }}
           />
         </form>
-        {meta && meta.total > 0 ? <p className="connections-count">{interpolate(t.connections.resultCount, { count: meta.total })}</p> : null}
+        <div className="connections-filter-row">
+          <label className="connections-sort">
+            <ArrowDownAZ size={15} aria-hidden="true" />
+            <span className="sr-only">{t.connections.sortLabel}</span>
+            <select value={sort} onChange={(event) => onSort(event.target.value as ConnectionSort)}>
+              <option value="newest">{t.connections.sortNewest}</option>
+              <option value="name">{t.connections.sortName}</option>
+            </select>
+          </label>
+          {meta && meta.total > 0 ? <p className="connections-count">{interpolate(t.connections.resultCount, { count: meta.total })}</p> : null}
+        </div>
       </div>
 
       {loading ? <ListSkeleton /> : null}
       {error ? <ErrorState title={t.connections.errors.loadFailed} description={t.connections.errors.loadFailedCopy} action={<Button variant="soft" size="sm" onClick={onRetry}>{t.connections.errors.retry}</Button>} /> : null}
       {!loading && !error && meta?.total === 0 ? <EmptyState icon={<UserMinus size={20} aria-hidden="true" />} title={t.connections.empty.title} description={t.connections.empty.copy} /> : null}
-      {!loading && !error ? children : null}
+      {!loading && !error ? <div className={grid ? 'connections-suggestion-grid' : undefined}>{children}</div> : null}
 
       {meta && meta.last_page > 1 ? (
         <Pagination
@@ -146,7 +205,7 @@ function ListSkeleton() {
 /** Incoming requests addressed to the viewer, with accept / decline. */
 function IncomingRequestsTab() {
   const { t } = useTranslation()
-  const list = useListState()
+  const list = useListState('incoming')
   const requests = useIncomingRequests(list.params)
 
   return (
@@ -156,7 +215,9 @@ function IncomingRequestsTab() {
         loading={requests.isLoading}
         error={requests.isError}
         search={list.search}
-        onSearch={(value) => { list.setSearch(value) }}
+        sort={list.sort}
+        onSearch={list.onSearch}
+        onSort={list.onSort}
         onRetry={() => void requests.refetch()}
         onPaging={list.onPaging}
         testId="incoming-requests"
@@ -173,7 +234,7 @@ function IncomingRequestsTab() {
 /** Requests the viewer sent, with cancel actions. */
 function OutgoingRequestsTab() {
   const { t } = useTranslation()
-  const list = useListState()
+  const list = useListState('outgoing')
   const requests = useOutgoingRequests(list.params)
 
   return (
@@ -183,7 +244,9 @@ function OutgoingRequestsTab() {
         loading={requests.isLoading}
         error={requests.isError}
         search={list.search}
-        onSearch={(value) => { list.setSearch(value) }}
+        sort={list.sort}
+        onSearch={list.onSearch}
+        onSort={list.onSort}
         onRetry={() => void requests.refetch()}
         onPaging={list.onPaging}
         testId="outgoing-requests"
@@ -201,7 +264,7 @@ function OutgoingRequestsTab() {
 function MyConnectionsTab() {
   const { t, locale } = useTranslation()
   const toast = useToast()
-  const list = useListState()
+  const list = useListState('connections')
   const connections = useMyConnections(list.params)
   const removeConnection = useRemoveConnection()
   const [removing, setRemoving] = useState<{ id: number; name: string } | null>(null)
@@ -213,7 +276,9 @@ function MyConnectionsTab() {
         loading={connections.isLoading}
         error={connections.isError}
         search={list.search}
-        onSearch={(value) => { list.setSearch(value) }}
+        sort={list.sort}
+        onSearch={list.onSearch}
+        onSort={list.onSort}
         onRetry={() => void connections.refetch()}
         onPaging={list.onPaging}
         testId="my-connections"
@@ -266,11 +331,37 @@ function MyConnectionsTab() {
   )
 }
 
+/** Real, actionable suggestions from the privacy-aware discovery endpoint. */
+function SuggestionsTab() {
+  const list = useListState('suggestions')
+  const suggestions = useConnectionSuggestions(list.params)
+
+  return (
+    <Card>
+      <ListFrame
+        meta={suggestions.data?.meta}
+        loading={suggestions.isLoading}
+        error={suggestions.isError}
+        search={list.search}
+        sort={list.sort}
+        onSearch={list.onSearch}
+        onSort={list.onSort}
+        onRetry={() => void suggestions.refetch()}
+        onPaging={list.onPaging}
+        testId="connection-suggestions"
+        grid
+      >
+        {suggestions.data?.data.map((profile) => <DiscoveryProfileCard key={profile.id} profile={profile} variant="grid" />)}
+      </ListFrame>
+    </Card>
+  )
+}
+
 /** The signed-in member's followers or following list. */
 function EdgesTab({ mode }: { mode: 'followers' | 'following' }) {
   const { locale } = useTranslation()
   const self = useOutletContext<{ id: number }>()
-  const list = useListState()
+  const list = useListState(mode)
   const followers = useFollowers(self.id, list.params, mode === 'followers')
   const following = useFollowing(self.id, list.params, mode === 'following')
   const edges = mode === 'followers' ? followers : following
@@ -282,7 +373,9 @@ function EdgesTab({ mode }: { mode: 'followers' | 'following' }) {
         loading={edges.isLoading}
         error={edges.isError}
         search={list.search}
-        onSearch={(value) => { list.setSearch(value) }}
+        sort={list.sort}
+        onSearch={list.onSearch}
+        onSort={list.onSort}
         onRetry={() => void edges.refetch()}
         onPaging={list.onPaging}
         testId={`edges-${mode}`}
@@ -298,6 +391,7 @@ function EdgesTab({ mode }: { mode: 'followers' | 'following' }) {
                 <>
                   <ConnectionStatusBadge relationship={row.relationship} />
                   <FollowButton userId={row.user.id} relationship={row.relationship} />
+                  <ConnectionRequestButton userId={row.user.id} relationship={row.relationship} />
                 </>
               ) : null}
             />
@@ -312,7 +406,7 @@ function EdgesTab({ mode }: { mode: 'followers' | 'following' }) {
 function BlockedTab() {
   const { t, locale } = useTranslation()
   const toast = useToast()
-  const list = useListState()
+  const list = useListState('blocked')
   const blocked = useBlockedUsers(list.params)
   const { unblock } = useBlockActions()
 
@@ -323,7 +417,9 @@ function BlockedTab() {
         loading={blocked.isLoading}
         error={blocked.isError}
         search={list.search}
-        onSearch={(value) => { list.setSearch(value) }}
+        sort={list.sort}
+        onSearch={list.onSearch}
+        onSort={list.onSort}
         onRetry={() => void blocked.refetch()}
         onPaging={list.onPaging}
         testId="blocked-users"

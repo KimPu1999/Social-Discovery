@@ -97,6 +97,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/users/{user}/connections', [ConnectionController::class, 'forUser'])->whereNumber('user');
         Route::get('/users/{user}/mutual-connections', [MutualConnectionController::class, 'show'])->whereNumber('user');
         Route::get('/connections', [ConnectionController::class, 'index']);
+        Route::get('/connections/suggestions', [Discovery\DiscoveryController::class, 'suggestions'])->middleware('throttle:discovery');
         Route::get('/connections/requests/incoming', [ConnectionRequestController::class, 'incoming']);
         Route::get('/connections/requests/outgoing', [ConnectionRequestController::class, 'outgoing']);
         Route::get('/settings/blocked-users', [BlockingController::class, 'index']);

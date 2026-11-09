@@ -106,7 +106,7 @@ class BlockService
     /**
      * Paginated blocked account list for the actor, searchable.
      *
-     * @param  array{page?: int, per_page?: int, search?: string}  $params
+     * @param  array{page?: int, per_page?: int, search?: string, sort?: string}  $params
      * @return array{data: array, meta: array}
      */
     public function blockedUsers(User $actor, array $params): array
@@ -130,7 +130,13 @@ class BlockService
             });
         }
 
-        $page = $query->orderByDesc('blocks.created_at')->orderBy('blocks.blocked_user_id')->paginate($params['per_page'] ?? 10, $columns, 'page', max($params['page'] ?? 1, 1));
+        if (($params['sort'] ?? 'newest') === 'name') {
+            $query->orderByRaw('lower(coalesce(blocked_profiles.display_name, blocked_users.name))')->orderBy('blocked_profiles.username')->orderBy('blocks.blocked_user_id');
+        } else {
+            $query->orderByDesc('blocks.created_at')->orderBy('blocks.blocked_user_id');
+        }
+
+        $page = $query->paginate($params['per_page'] ?? 10, $columns, 'page', max($params['page'] ?? 1, 1));
 
         $data = collect($page->items())->values()->map(static fn (object $row): array => [
             'user' => [

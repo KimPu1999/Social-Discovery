@@ -28,6 +28,7 @@ vi.mock('../features/connections/api/connectionsApi', () => ({
     declineRequest: vi.fn(),
     cancelRequest: vi.fn(),
     myConnections: vi.fn(),
+    suggestions: vi.fn(),
     userConnections: vi.fn(),
     removeConnection: vi.fn(),
     block: vi.fn(),
@@ -90,6 +91,7 @@ beforeEach(() => {
   vi.mocked(connectionsApi.incomingRequests).mockResolvedValue({ data: [{ id: 5, status: 'pending', created_at: new Date('2026-02-02').toISOString(), sender: peer, receiver: { id: 42, username: 'kimpu', display_name: 'Kim Pu' } }], meta })
   vi.mocked(connectionsApi.outgoingRequests).mockResolvedValue({ data: [{ id: 6, status: 'pending', created_at: new Date('2026-02-02').toISOString(), sender: { id: 42, username: 'kimpu', display_name: 'Kim Pu' }, receiver: peer }], meta })
   vi.mocked(connectionsApi.myConnections).mockResolvedValue({ data: [{ user: peer, connected_at: new Date('2026-02-02').toISOString(), relationship: { ...openRelationship, is_connected: true, can_follow: false, can_connect: false } }], meta })
+  vi.mocked(connectionsApi.suggestions).mockResolvedValue({ data: [{ id: 8, username: 'noah', display_name: 'Noah North', bio: 'Books.', interests: [], match: null, relationship: openRelationship }], meta })
   vi.mocked(connectionsApi.followers).mockResolvedValue({ data: [{ user: peer, followed_at: null, relationship: openRelationship }], meta, relationship: null })
   vi.mocked(connectionsApi.following).mockResolvedValue({ data: [{ user: peer, followed_at: null, relationship: { ...openRelationship, is_following: true } }], meta, relationship: null })
   vi.mocked(connectionsApi.blockedUsers).mockResolvedValue({ data: [{ user: peer, blocked_at: new Date('2026-02-02').toISOString() }], meta })
@@ -146,6 +148,14 @@ describe('connections workspace', () => {
     await view.findByText('Aria Sun')
     await user.click(view.getByRole('button', { name: 'Unblock' }))
     await waitFor(() => expect(vi.mocked(connectionsApi.unblock).mock.calls[0]?.[0]).toBe(7))
+  })
+
+  it('loads actionable suggestions from the server and keeps the profile action available', async () => {
+    const view = renderRoutes('/connections?tab=suggestions')
+    expect(await view.findByText('Suggestions')).toBeInTheDocument()
+    expect(await view.findByText('Noah North')).toBeInTheDocument()
+    expect(view.getByRole('link', { name: 'View profile' })).toHaveAttribute('href', '/people/noah')
+    expect(vi.mocked(connectionsApi.suggestions)).toHaveBeenCalled()
   })
 
   it('paginates from URL-friendly state', async () => {
