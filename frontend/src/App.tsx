@@ -11,11 +11,13 @@ import './layout.css'
 import './responsive.css'
 import './features/discovery/discovery.css'
 import './features/connections/connections.css'
+import './features/communities/communities.css'
 
 const HomePage = lazy(() => import('./pages/PublicPages').then((module) => ({ default: module.HomePage })))
 const PublicInfoPage = lazy(() => import('./pages/PublicPages').then((module) => ({ default: module.PublicInfoPage })))
 const FeaturesPage = lazy(() => import('./pages/PublicPages').then((module) => ({ default: module.FeaturesPage })))
 const ExplorePage = lazy(() => import('./pages/PublicPages').then((module) => ({ default: module.ExplorePage })))
+const CommunityGuidePage = lazy(() => import('./pages/PublicPages').then((module) => ({ default: module.CommunityGuidePage })))
 const PlaceholderPage = lazy(() => import('./pages/PlaceholderPage').then((module) => ({ default: module.PlaceholderPage })))
 const LoginPage = lazy(() => import('./features/auth/AuthPages').then((module) => ({ default: module.LoginPage })))
 const RegisterPage = lazy(() => import('./features/auth/AuthPages').then((module) => ({ default: module.RegisterPage })))
@@ -26,6 +28,7 @@ const VerifyResultPage = lazy(() => import('./features/auth/AuthPages').then((mo
 const ProfilePage = lazy(() => import('./features/profile/ProfilePage').then((module) => ({ default: module.ProfilePage })))
 const SettingsPage = lazy(() => import('./features/settings/SettingsPage').then((module) => ({ default: module.SettingsPage })))
 const DiscoverPage = lazy(() => import('./features/discovery/pages/DiscoverPage').then((module) => ({ default: module.DiscoverPage })))
+const CommunitiesPage = lazy(() => import('./features/communities/pages/CommunitiesPage').then((module) => ({ default: module.CommunitiesPage })))
 const PeopleExplorerPage = lazy(() => import('./features/discovery/pages/PeopleExplorerPage').then((module) => ({ default: module.PeopleExplorerPage })))
 const DiscoveryProfilePage = lazy(() => import('./features/discovery/pages/DiscoveryProfilePage').then((module) => ({ default: module.DiscoveryProfilePage })))
 const DiscoverySettingsPage = lazy(() => import('./features/discovery/pages/DiscoverySettingsPage').then((module) => ({ default: module.DiscoverySettingsPage })))
@@ -61,7 +64,7 @@ export default function App() {
       <Route path="/about" element={<Lazy><PublicInfoPage title="About Social Discovery" description="A platform for finding community through shared interests and moving at a human pace." /></Lazy>} />
       <Route path="/features" element={<Lazy><FeaturesPage /></Lazy>} />
       <Route path="/explore" element={<Lazy><ExplorePage /></Lazy>} />
-      <Route path="/community-guide" element={<Lazy><PublicInfoPage title="Communities" description="Community spaces will be introduced with clear guidelines and thoughtful moderation." /></Lazy>} />
+      <Route path="/community-guide" element={<Lazy><CommunityGuidePage /></Lazy>} />
       <Route path="/event-guide" element={<Lazy><PublicInfoPage title="Events" description="Events will help people gather around shared interests and experiences." /></Lazy>} />
       <Route path="/contact" element={<Lazy><PublicInfoPage title="Contact" description="A simple place to find support and share feedback." /></Lazy>} />
       <Route path="/privacy" element={<Lazy><PublicInfoPage title="Privacy Policy" description="Clear choices and respectful handling of personal data." /></Lazy>} />
@@ -85,7 +88,7 @@ export default function App() {
         <Route path="/connections" element={<Lazy><ConnectionsPage /></Lazy>} />
         <Route path="/feed" element={<Lazy><PlaceholderPage title="Feed" description="A future home for updates from your communities." icon={Sparkles} /></Lazy>} />
         <Route path="/messages" element={<Lazy><PlaceholderPage title="Messages" description="Private conversations are part of the next layer." icon={MessageCircle} /></Lazy>} />
-        <Route path="/communities" element={<Lazy><PlaceholderPage title="Communities" description="Find spaces organized around the things you care about." icon={Users} /></Lazy>} />
+        <Route path="/communities" element={<Lazy><CommunitiesPage /></Lazy>} />
         <Route path="/events" element={<Lazy><PlaceholderPage title="Events" description="Join gatherings, workshops, and shared experiences." icon={CalendarDays} /></Lazy>} />
         <Route path="/notifications" element={<Lazy><NotificationsPage /></Lazy>} />
         <Route path="/profile" element={<Lazy><ProfilePage /></Lazy>} />

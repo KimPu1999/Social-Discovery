@@ -75,4 +75,14 @@ export function ExplorePage() {
   </section>
 }
 
+export function CommunityGuidePage() {
+  const { locale } = useTranslation()
+  const points = [
+    { icon: Compass, title: copy(locale, 'Start with shared interests', 'တူညီသော စိတ်ဝင်စားမှုများမှ စတင်ပါ'), text: copy(locale, 'Community spaces will be organized around real interests from the platform catalogue.', 'Community နေရာများကို platform catalogue ရှိ အမှန်တကယ် စိတ်ဝင်စားမှုများအပေါ် အခြေခံဖွဲ့စည်းပါမည်။') },
+    { icon: Users, title: copy(locale, 'Participate with context', 'အကြောင်းအရာနှင့် ပါဝင်ပါ'), text: copy(locale, 'The goal is thoughtful participation, not noisy rooms or empty member counts.', 'ရည်ရွယ်ချက်မှာ ဆူညံသောအခန်းများ သို့မဟုတ် အလွတ် member count များမဟုတ်ဘဲ အဓိပ္ပာယ်ရှိစွာ ပါဝင်မှုဖြစ်သည်။') },
+    { icon: LockKeyhole, title: copy(locale, 'Clear community boundaries', 'ရှင်းလင်းသော အသိုင်းအဝိုင်း ကန့်သတ်ချက်များ'), text: copy(locale, 'Guidelines and privacy controls will be part of every community experience.', 'Community အတွေ့အကြုံတိုင်းတွင် စည်းမျဉ်းများနှင့် ကိုယ်ရေးလုံခြုံမှု ထိန်းချုပ်မှုများ ပါဝင်မည်။') },
+  ]
+  return <section className="community-guide-page"><header className="community-guide-hero"><div><p className="eyebrow">{copy(locale, 'SOCIAL DISCOVERY', 'SOCIAL DISCOVERY')}</p><h1>{copy(locale, 'Communities with a reason to return.', 'ပြန်လာရန် အကြောင်းပြချက်ရှိသော အသိုင်းအဝိုင်းများ')}</h1><p>{copy(locale, 'We are preparing community spaces around shared interests, respectful conversation, and clear moderation.', 'တူညီသော စိတ်ဝင်စားမှုများ၊ လေးစားစွာပြောဆိုမှုများနှင့် ရှင်းလင်းသော moderation အပေါ် အခြေခံသော အသိုင်းအဝိုင်းနေရာများကို ပြင်ဆင်နေပါသည်။')}</p></div><div className="community-guide-status"><span className="explore-hero-icon"><Users size={21} /></span><strong>{copy(locale, 'Community module in preparation', 'Community module ပြင်ဆင်နေဆဲ')}</strong><span>{copy(locale, 'Real communities will appear here when they are published.', 'အမှန်တကယ် အသိုင်းအဝိုင်းများကို ထုတ်ပြန်ပြီးသည်နှင့် ဤနေရာတွင် ပြသပါမည်။')}</span></div></header><div className="community-guide-points">{points.map(({ icon: Icon, title, text }) => <Card className="community-guide-point" key={title}><span className="feature-icon"><Icon size={20} /></span><h2>{title}</h2><p>{text}</p></Card>)}</div></section>
+}
+
 export function PublicInfoPage({ title, description }: { title: string; description: string }) { return <section className="public-info-page"><p className="eyebrow">Social Discovery</p><h1>{title}</h1><p>{description}</p><div className="info-placeholder"><Sparkles size={20} /><span>More information will be added as this area is connected to the platform.</span></div></section> }

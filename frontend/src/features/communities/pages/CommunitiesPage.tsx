@@ -1,0 +1,25 @@
+import { useQuery } from '@tanstack/react-query'
+import { ArrowRight, Compass, LockKeyhole, MessageCircle, Plus, Users } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Badge, Card, CardHeader, ErrorState, InterestChip, Skeleton } from '../../../components/ui'
+import { useTranslation } from '../../../layouts/AppLayouts'
+import { interestService } from '../../../services/interestService'
+
+const local = (locale: string, en: string, my: string) => locale === 'my' ? my : en
+
+export function CommunitiesPage() {
+  const { locale } = useTranslation()
+  const interestsQuery = useQuery({ queryKey: ['public-interests'], queryFn: interestService.list, staleTime: 5 * 60 * 1000 })
+  const interests = interestsQuery.data ?? []
+
+  return <section className="page-shell communities-page">
+    <header className="communities-header">
+      <div><p className="eyebrow">{local(locale, 'YOUR COMMUNITY SPACE', 'သင့်အသိုင်းအဝိုင်းနေရာ')}</p><h1>{local(locale, 'Find your people and make space for belonging.', 'သင့်လူများကို ရှာဖွေပြီး ပိုင်ဆိုင်မှုအတွက် နေရာဖန်တီးပါ။')}</h1><p className="page-description">{local(locale, 'Community spaces are being prepared around shared interests, clear guidelines, and respectful participation.', 'တူညီသော စိတ်ဝင်စားမှုများ၊ ရှင်းလင်းသော စည်းမျဉ်းများနှင့် လေးစားစွာ ပါဝင်မှုများအပေါ် အခြေခံထားသော အသိုင်းအဝိုင်းနေရာများကို ပြင်ဆင်နေပါသည်။')}</p><div className="communities-header-actions"><Link className="ui-button ui-button-primary ui-button-md" to="/discover">{local(locale, 'Discover people', 'လူများကို ရှာဖွေပါ')}<ArrowRight size={16} /></Link><Link className="ui-button ui-button-secondary ui-button-md" to="/explore">{local(locale, 'Browse interests', 'စိတ်ဝင်စားမှုများ ကြည့်ပါ')}</Link></div></div><span className="heading-icon"><Users size={22} /></span>
+    </header>
+    <div className="communities-grid">
+      <Card className="community-status-card"><CardHeader eyebrow={local(locale, 'MODULE STATUS', 'MODULE အခြေအနေ')} title={local(locale, 'Community spaces are coming next', 'အသိုင်းအဝိုင်းနေရာများ မကြာမီလာမည်')} /><div className="community-status"><span className="community-status-icon"><Users size={20} /></span><div><Badge tone="primary">{local(locale, 'Preparing', 'ပြင်ဆင်နေဆဲ')}</Badge><p>{local(locale, 'There are no published communities available yet. We will show real spaces here once the community module is connected.', 'လက်ရှိတွင် ထုတ်ပြန်ထားသော အသိုင်းအဝိုင်း မရှိသေးပါ။ Community module ချိတ်ဆက်ပြီးသည်နှင့် အမှန်တကယ်ရှိသော နေရာများကို ဤနေရာတွင် ပြသပါမည်။')}</p></div></div><div className="community-status-actions"><Link className="text-link" to="/settings">{local(locale, 'Manage preferences', 'Preferences စီမံရန်')}<ArrowRight size={14} /></Link></div></Card>
+      <Card className="community-start-card"><CardHeader eyebrow={local(locale, 'START WITH CONTEXT', 'အကြောင်းအရာဖြင့် စတင်ပါ')} title={local(locale, 'Your interests are the first step', 'သင့်စိတ်ဝင်စားမှုများသည် ပထမခြေလှမ်းဖြစ်သည်')} /><div className="community-principles"><p><span><Compass size={17} /></span><strong>{local(locale, 'Discover around shared signals', 'တူညီသော အချက်ပြမှုများဖြင့် ရှာဖွေပါ')}</strong></p><p><span><MessageCircle size={17} /></span><strong>{local(locale, 'Join conversations at your pace', 'သင့်အရှိန်အဟုန်ဖြင့် စကားဝိုင်းများတွင် ပါဝင်ပါ')}</strong></p><p><span><LockKeyhole size={17} /></span><strong>{local(locale, 'Keep your boundaries clear', 'သင့်ကန့်သတ်ချက်များကို ရှင်းလင်းထားပါ')}</strong></p></div></Card>
+    </div>
+    <Card className="community-interests-card"><CardHeader eyebrow={local(locale, 'REAL PLATFORM DATA', 'PLATFORM ၏ အမှန်တကယ်ဒေတာ')} title={local(locale, 'Interests to build around', 'တည်ဆောက်ရန် စိတ်ဝင်စားမှုများ')} action={<Link className="text-link" to="/explore">{local(locale, 'View all', 'အားလုံးကြည့်ရန်')}<ArrowRight size={14} /></Link>} />{interestsQuery.isLoading ? <div className="community-interest-loading">{Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="community-interest-skeleton" />)}</div> : interestsQuery.isError ? <ErrorState title={local(locale, 'Interest data is unavailable', 'စိတ်ဝင်စားမှုဒေတာ မရရှိနိုင်ပါ')} description={local(locale, 'We could not load the platform interest catalogue.', 'Platform စိတ်ဝင်စားမှု catalogue ကို မရယူနိုင်ပါ။')} action={<button className="ui-button ui-button-secondary ui-button-sm" type="button" onClick={() => interestsQuery.refetch()}>{local(locale, 'Retry', 'ထပ်မံကြိုးစားပါ')}</button>} /> : interests.length ? <div className="community-interest-list">{interests.slice(0, 12).map((interest) => <InterestChip key={interest.id}>{interest.name}</InterestChip>)}</div> : <div className="community-empty"><Plus size={17} /><span>{local(locale, 'Add interests to prepare for community discovery.', 'အသိုင်းအဝိုင်းရှာဖွေမှုအတွက် စိတ်ဝင်စားမှုများ ထည့်ပါ။')}</span><Link className="text-link" to="/profile">{local(locale, 'Edit profile', 'ပရိုဖိုင်ပြင်ရန်')}<ArrowRight size={14} /></Link></div>}</Card>
+  </section>
+}
