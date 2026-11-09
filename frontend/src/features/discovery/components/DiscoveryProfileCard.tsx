@@ -42,7 +42,6 @@ export function DiscoveryProfileCard({ profile, onFeedback, onUndoFeedback, hidd
             <Link to={`/people/${profile.username}`}>{profile.display_name}</Link>
           </h3>
           <p className="discovery-card-username">@{profile.username}</p>
-          {profile.bio ? <p className="discovery-card-bio">{profile.bio}</p> : <p className="discovery-card-bio is-muted">{t.discovery.card.noBio}</p>}
         </div>
         <div className="discovery-card-tools">
           <MatchScoreIndicator match={profile.match} />
@@ -50,16 +49,20 @@ export function DiscoveryProfileCard({ profile, onFeedback, onUndoFeedback, hidd
         </div>
       </header>
 
-      {sharedInterests.length ? <p className="discovery-card-shared">{interpolateShared(t, sharedInterests.length)}</p> : null}
-      {profile.match ? <MatchExplanation match={profile.match} /> : null}
+      <section className="discovery-card-details">
+        {profile.bio ? <p className="discovery-card-bio">{profile.bio}</p> : <p className="discovery-card-bio is-muted">{t.discovery.card.noBio}</p>}
+        {sharedInterests.length ? <p className="discovery-card-shared">{interpolateShared(t, sharedInterests.length)}</p> : null}
+        {profile.match ? <MatchExplanation match={profile.match} /> : null}
 
-      <div className="discovery-card-interests">
-        {sharedInterests.map((interest) => <InterestChip key={interest.id} selected>{interest.name}</InterestChip>)}
-        {otherInterests.map((interest) => <InterestChip key={interest.id}>{interest.name}</InterestChip>)}
-      </div>
+        <div className="discovery-card-interests">
+          {sharedInterests.map((interest) => <InterestChip key={interest.id} selected>{interest.name}</InterestChip>)}
+          {otherInterests.map((interest) => <InterestChip key={interest.id}>{interest.name}</InterestChip>)}
+        </div>
+
+        {profile.joined_at ? <span className="discovery-card-joined"><CalendarDays size={13} aria-hidden="true" /><span>{t.discovery.profile.joined.replace('{date}', formatLocaleDate(profile.joined_at, locale))}</span></span> : null}
+      </section>
 
       <footer className="discovery-card-actions">
-        {profile.joined_at ? <span className="discovery-card-joined"><CalendarDays size={13} aria-hidden="true" />{formatLocaleDate(profile.joined_at, locale)}</span> : null}
         <div className="discovery-card-buttons">
           {/* Phase 05: live follow / connect controls when the API sent
               relationship state; otherwise keep the clearly-unavailable hint. */}
@@ -73,7 +76,7 @@ export function DiscoveryProfileCard({ profile, onFeedback, onUndoFeedback, hidd
               <Button variant="soft" size="sm" disabled>{t.discovery.card.connect}</Button>
             </Tooltip>
           )}
-          <Link className="ui-button ui-button-secondary ui-button-sm" to={`/people/${profile.username}`}>{t.discovery.card.viewProfile}</Link>
+          <Link className="ui-button ui-button-secondary ui-button-sm discovery-card-view-profile" to={`/people/${profile.username}`}>{t.discovery.card.viewProfile}</Link>
         </div>
       </footer>
       <ConfirmDialog

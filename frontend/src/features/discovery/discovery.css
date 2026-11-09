@@ -17,29 +17,43 @@
 .discovery-summary-counts dd { margin: 0; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
 
 /* Cards grid: 1 col mobile, 2 tablet, 3–4 desktop */
-.discovery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(285px, 1fr)); gap: 16px; }
+.discovery-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 285px), 1fr)); gap: 16px; min-width: 0; }
 @media (min-width: 640px) { .discovery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 980px) { .discovery-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 1280px) { .discovery-workspace-wide .discovery-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .discovery-grid-list { grid-template-columns: 1fr !important; }
 
 /* Profile card */
-.discovery-card { display: grid; gap: 12px; align-content: start; padding: 16px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); }
-.discovery-card-head { display: flex; align-items: flex-start; gap: 12px; }
-.discovery-card-id { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.discovery-card { display: grid; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; gap: 12px; align-content: start; padding: 16px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.discovery-card-head { display: grid; min-width: 0; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 12px; }
+.discovery-card-head > .ui-avatar { flex-shrink: 0; }
+.discovery-card-id { display: grid; gap: 2px; min-width: 0; max-width: 100%; }
 .discovery-card-name { margin: 0; font-size: 15px; font-weight: 750; }
+.discovery-card-name, .discovery-card-username { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
 .discovery-card-name a { color: inherit; text-decoration: none; }
 .discovery-card-name a:hover { color: var(--color-primary); }
 .discovery-card-username { margin: 0; font-size: 11px; font-weight: 700; color: var(--color-text-secondary); }
-.discovery-card-bio { margin: 4px 0 0; font-size: 12px; line-height: 1.5; color: var(--color-text-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.discovery-card-details { display: grid; min-width: 0; gap: 10px; }
+.discovery-card-bio { min-width: 0; margin: 0; font-size: 12px; line-height: 1.5; color: var(--color-text-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; word-break: break-word; }
 .discovery-card-bio.is-muted, .discovery-profile-bio.is-muted { font-style: italic; opacity: 0.75; }
-.discovery-card-tools { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.discovery-card-tools { display: inline-flex; min-width: 0; align-items: center; justify-content: flex-end; gap: 6px; flex: 0 0 auto; }
+.discovery-card-tools .discovery-match { min-width: 0; flex: 0 1 auto; }
+.discovery-card-tools .ui-dropdown { min-width: 0; flex: 0 0 auto; }
+.discovery-card-tools .ui-dropdown-trigger { width: 32px; min-width: 32px; height: 32px; justify-content: center; gap: 0; padding: 0; }
 .discovery-card-shared { margin: 0; font-size: 11px; font-weight: 750; color: var(--color-primary-hover); }
 .discovery-match-explanation { margin: 0; font-size: 11px; color: var(--color-text-secondary); }
 .discovery-card-interests { display: flex; flex-wrap: wrap; gap: 6px; }
-.discovery-card-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; min-width: 0; }
-.discovery-card-buttons { display: inline-flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; min-width: 0; }
-.discovery-card-joined { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; color: var(--color-text-secondary); font-size: 10px; font-weight: 700; }
+.discovery-card-actions { display: block; width: 100%; min-width: 0; margin-top: auto; }
+.discovery-card-buttons { display: grid; width: 100%; min-width: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 8px; }
+.discovery-card-buttons > .ui-button,
+.discovery-card-buttons > .ui-tooltip,
+.discovery-card-buttons > .ui-tooltip > .ui-button,
+.discovery-card-buttons > .discovery-card-view-profile { width: 100%; max-width: 100%; min-width: 0; min-height: 36px; box-sizing: border-box; overflow-wrap: anywhere; white-space: normal; text-align: center; }
+.discovery-card-buttons > .ui-tooltip { display: block; }
+.discovery-card-buttons > .discovery-card-view-profile { grid-column: 1 / -1; }
+.discovery-card-joined { display: inline-flex; max-width: 100%; min-width: 0; align-items: center; gap: 5px; color: var(--color-text-secondary); font-size: 10px; font-weight: 700; white-space: nowrap; }
+.discovery-card-joined svg { flex: 0 0 auto; }
+.discovery-card-joined span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .discovery-card-list .discovery-card-bio { -webkit-line-clamp: 3; }
 
 /* Match indicator */
@@ -108,11 +122,11 @@
 .people-page .discovery-toolbar-main .discovery-search { width: min(360px, 100%); min-width: 0; }
 .people-page .discovery-toolbar-row { flex: 1; }
 .discovery-active-filter-count { color: var(--color-text-secondary); font-size: 10px; font-weight: 750; white-space: nowrap; }
-.people-page .discovery-card-list { grid-template-columns: minmax(0, 1fr) auto; min-height: 0; align-items: center; }
+.people-page .discovery-card-list { grid-template-columns: minmax(0, 1fr) minmax(220px, 280px); min-height: 0; align-items: center; }
 .people-page .discovery-card-list .discovery-card-head { grid-column: 1 / -1; align-items: center; }
 .people-page .discovery-card-list .discovery-card-shared, .people-page .discovery-card-list .discovery-match-explanation, .people-page .discovery-card-list .discovery-card-interests { grid-column: 1; }
-.people-page .discovery-card-list .discovery-card-actions { grid-column: 2; grid-row: 2 / span 3; align-self: center; flex-direction: column; align-items: flex-end; }
-.people-page .discovery-card-list .discovery-card-buttons { justify-content: flex-end; }
+.people-page .discovery-card-list .discovery-card-actions { grid-column: 2; grid-row: 2; align-self: center; }
+.people-page .discovery-card-list .discovery-card-buttons { justify-content: stretch; }
 
 @media (max-width: 980px) {
   .people-page .discovery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -126,10 +140,9 @@
   .people-page .discovery-grid { grid-template-columns: 1fr; gap: 12px; }
   .people-page .discovery-card { min-height: 0; }
   .people-page .discovery-card-list { grid-template-columns: 1fr; }
-  .people-page .discovery-card-list .discovery-card-actions { grid-column: 1; grid-row: auto; align-items: stretch; }
-  .people-page .discovery-card-list .discovery-card-buttons { justify-content: flex-start; }
-  .people-page .discovery-card-actions { align-items: flex-start; flex-direction: column; }
-  .people-page .discovery-card-buttons { width: 100%; justify-content: flex-start; }
+  .people-page .discovery-card-list .discovery-card-actions { grid-column: 1; grid-row: auto; }
+  .people-page .discovery-card-list .discovery-card-buttons { justify-content: stretch; }
+  .people-page .discovery-card-buttons { width: 100%; justify-content: stretch; }
   .people-result-summary { align-items: flex-start; flex-direction: column; gap: 6px; }
 }
 
