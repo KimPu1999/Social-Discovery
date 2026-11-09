@@ -2,8 +2,6 @@
 
 :root {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans Myanmar", "Myanmar Text", sans-serif;
-  color: var(--color-text-primary);
-  background: var(--color-background);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -13,6 +11,8 @@
   --color-background: #f8fafc;
   --color-surface: #ffffff;
   --color-surface-muted: #f1f5f9;
+  --color-surface-hover: #eef2f7;
+  --color-sidebar: #ffffff;
   --color-text-primary: #0f172a;
   --color-text-secondary: #64748b;
   --color-border: #e2e8f0;
@@ -20,6 +20,8 @@
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
   --color-focus: #818cf8;
+  --color-glow: #ffffffd9;
+  --color-glow-border: #e2e8e0c0;
   --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.04);
   --shadow-md: 0 12px 30px rgb(15 23 42 / 0.07);
   --radius-sm: 6px;
@@ -29,20 +31,28 @@
 }
 
 html[data-theme='dark'] {
-  --color-background: #0b1120;
-  --color-surface: #111b2e;
-  --color-surface-muted: #172237;
+  --color-background: #0b1020;
+  --color-surface: #151e31;
+  --color-surface-muted: #1a2438;
+  --color-surface-hover: #202b42;
+  --color-sidebar: #101827;
   --color-text-primary: #f8fafc;
   --color-text-secondary: #94a3b8;
-  --color-border: #26364f;
+  --color-border: #253149;
   --color-focus: #a5b4fc;
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.2);
-  --shadow-md: 0 14px 32px rgb(0 0 0 / 0.22);
+  --color-glow: #101827eb;
+  --color-glow-border: #253149c0;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.25);
+  --shadow-md: 0 14px 32px rgb(0 0 0 / 0.3);
 }
 
 * { box-sizing: border-box; }
-html { min-width: 320px; background: var(--color-background); }
-body { margin: 0; min-width: 320px; background: var(--color-background); color: var(--color-text-primary); }
+html { min-width: 320px; background: var(--color-background); color: var(--color-text-primary); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans Myanmar", "Myanmar Text", sans-serif; }
+body { min-width: 320px; margin: 0; font-family: inherit; color: var(--color-text-primary); background: var(--color-background); }
+h1, h2, h3, h4 { min-width: 0; color: var(--color-text-primary); }
+[hidden] { display: none !important; }
+.page-shell { min-width: 0; }
+.flex-none { flex: none; }
 button, input, textarea, select { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 a { color: inherit; text-decoration: none; }

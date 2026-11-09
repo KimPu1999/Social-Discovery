@@ -1,12 +1,12 @@
-import { useEffect, useState, type ComponentType } from 'react'
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { Bell, CalendarDays, ChevronDown, Compass, HeartHandshake, Home, Languages, LockKeyhole, LogOut, Menu, MessageCircle, Moon, Settings, ShieldCheck, Sparkles, Sun, Users, X } from 'lucide-react'
+import { useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Bell, CalendarDays, ChevronDown, Compass, HeartHandshake, Home, Languages, LockKeyhole, LogOut, Menu, MessageCircle, Moon, PanelLeftClose, PanelLeftOpen, Settings, ShieldCheck, Sparkles, Sun, Users, X } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { User } from '../types'
 import { copy, interpolate, type Copy, type Locale } from '../i18n'
 import { authService } from '../services/authService'
 import { useUiStore } from '../stores/uiStore'
-import { Avatar, Dropdown, IconButton, SearchBar } from '../components/ui'
+import { Avatar, Dropdown, IconButton, SearchBar, Tooltip } from '../components/ui'
 
 type NavEntry = { key: keyof Copy['nav']; path: string; Icon: ComponentType<{ size?: number }> }
 type AdminEntry = { key: keyof Copy['admin'] | 'overview' | 'userManagement' | 'reports' | 'contentModeration'; path: string; Icon: ComponentType<{ size?: number }>; roles: readonly ['moderator', 'super_admin'] | readonly ['super_admin'] }
@@ -108,14 +108,51 @@ export function AuthLayout() {
 
 function localeText(locale: Locale, english: string, myanmar: string) { return locale === 'my' ? myanmar : english }
 
+/** Sidebar navigation row: horizontal icon + label, active-route state, tooltip when collapsed. */
+function SidebarLink({ to, end = false, label, collapsed, onClick, children }: { to: string; end?: boolean; label: string; collapsed: boolean; onClick?: () => void; children: ReactNode }) {
+  const linkRef = useRef<HTMLAnchorElement>(null)
+  return (
+    <NavLink ref={linkRef} to={to} end={end} onClick={onClick} className={({ isActive }) => (isActive ? 'is-active' : undefined)} aria-label={collapsed ? label : undefined}>
+      {children}
+      <span>{label}</span>
+      {collapsed ? <span className="sr-only">{label}</span> : null}
+    </NavLink>
+  )
+}
+
 function MemberSidebar({ user, mobileOpen, onClose }: { user: User; mobileOpen: boolean; onClose: () => void }) {
   const { t } = useTranslation(); const sidebarOpen = useUiStore((state) => state.sidebarOpen); const toggleSidebar = useUiStore((state) => state.toggleSidebar); const logout = useLogout()
-  return <aside className={`member-sidebar ${sidebarOpen ? 'is-expanded' : 'is-collapsed'} ${mobileOpen ? 'is-mobile-open' : ''}`}><div className="sidebar-header"><Logo compact={!sidebarOpen} /><IconButton className="mobile-only" label={t.actions.close} onClick={onClose}><X size={19} /></IconButton></div><nav className="member-nav" aria-label="Member navigation">{memberGroups.map((group) => <div className="nav-group" key={group.label}><p className="nav-group-label">{t.nav[group.label]}</p>{group.items.map(({ key, path, Icon }) => <NavLink key={path} to={path} end={path === '/dashboard'} title={!sidebarOpen ? t.nav[key] : undefined} onClick={onClose} className={({ isActive }) => isActive ? 'is-active' : ''}><Icon size={18} aria-hidden="true" /><span>{t.nav[key]}</span></NavLink>)}</div>)}</nav><div className="sidebar-account"><div className="sidebar-user"><Avatar name={user.name} size="sm" /><span><strong>{user.name}</strong><small>@{user.username}</small></span></div><div className="sidebar-account-actions"><IconButton label={t.actions.signOut} onClick={() => void logout}><LogOut size={17} /></IconButton><IconButton className="desktop-only" label={t.actions.toggleSidebar} onClick={toggleSidebar}><Menu size={17} /></IconButton></div></div></aside>
+  const CollapseIcon = sidebarOpen ? PanelLeftClose : PanelLeftOpen
+  return <aside className={`member-sidebar ${sidebarOpen ? 'is-expanded' : 'is-collapsed'} ${mobileOpen ? 'is-mobile-open' : ''}`}><div className="sidebar-header"><Logo compact={!sidebarOpen} /><span className="sidebar-header-tools"><IconButton className="mobile-only" label={t.actions.close} onClick={onClose}><X size={19} /></IconButton><Tooltip content={t.actions.toggleSidebar} position="right"><IconButton className="desktop-only" label={t.actions.toggleSidebar} onClick={toggleSidebar}><CollapseIcon size={17} /></IconButton></Tooltip></span></div><nav className="member-nav" aria-label="Member navigation">{memberGroups.map((group) => <div className="nav-group" key={group.label}><p className="nav-group-label">{t.nav[group.label]}</p>{group.items.map(({ key, path, Icon }) => <SidebarLink key={path} to={path} end={path === '/dashboard'} label={t.nav[key]} collapsed={!sidebarOpen} onClick={onClose}><Icon size={18} aria-hidden="true" /></SidebarLink>)}</div>)}</nav><div className="sidebar-account"><div className="sidebar-user"><Avatar name={user.name} size="sm" /><span><strong>{user.name}</strong><small>@{user.username}</small></span></div><div className="sidebar-account-actions"><IconButton label={t.actions.signOut} onClick={() => void logout}><LogOut size={17} /></IconButton></div></div></aside>
+}
+
+const memberTopbarTitles: [RegExp, keyof Copy['nav']][] = [
+  [/^\/dashboard/, 'dashboard'],
+  [/^\/discover/, 'discover'],
+  [/^\/people\/.+/, 'profile'],
+  [/^\/people/, 'people'],
+  [/^\/connections/, 'connections'],
+  [/^\/feed/, 'feed'],
+  [/^\/messages/, 'messages'],
+  [/^\/communities/, 'communities'],
+  [/^\/events/, 'events'],
+  [/^\/notifications/, 'notifications'],
+  [/^\/settings\/discovery/, 'settings'],
+  [/^\/settings/, 'settings'],
+  [/^\/profile/, 'profile'],
+]
+
+/** Route → current page title for the topbar. */
+export function usePageTitle(): keyof Copy['nav'] {
+  const { pathname } = useLocation()
+  const matched = memberTopbarTitles.find(([pattern]) => pattern.test(pathname))
+  return matched?.[1] ?? 'dashboard'
 }
 
 function MemberTopbar({ user, onOpenMenu }: { user: User; onOpenMenu: () => void }) {
-  const { t } = useTranslation(); const navigate = useNavigate(); const [search, setSearch] = useState(''); const logout = useLogout()
-  return <header className="member-topbar"><IconButton className="mobile-only" label={t.actions.menu} onClick={onOpenMenu}><Menu size={20} /></IconButton><SearchBar value={search} onChange={setSearch} onClear={() => setSearch('')} placeholder={t.searchPlaceholder} className="topbar-search" /><div className="topbar-actions"><IconButton label={t.nav.messages} onClick={() => navigate('/messages')}><MessageCircle size={19} /></IconButton><IconButton label={t.nav.notifications} onClick={() => navigate('/notifications')}><Bell size={19} /></IconButton><LanguageToggle /><ThemeToggle /><Dropdown label={<><Avatar name={user.name} size="sm" /><span className="profile-label">{user.name}</span></>}><Link className="menu-item" to="/profile"><Users size={16} />{t.nav.profile}</Link><Link className="menu-item" to="/settings"><Settings size={16} />{t.nav.settings}</Link><button className="menu-item menu-item-danger" onClick={() => void logout}><LogOut size={16} />{t.actions.signOut}</button></Dropdown></div></header>
+  const { t } = useTranslation(); const navigate = useNavigate(); const [search, setSearch] = useState(''); const logout = useLogout(); const toggleSidebar = useUiStore((state) => state.toggleSidebar)
+  const pageTitle = usePageTitle()
+  return <header className="member-topbar"><div className="topbar-lead"><IconButton className="mobile-only" label={t.actions.menu} onClick={onOpenMenu}><Menu size={20} /></IconButton><IconButton className="desktop-only" label={t.actions.toggleSidebar} onClick={toggleSidebar}><Menu size={18} /></IconButton><h1 className="topbar-title">{t.nav[pageTitle]}</h1></div><SearchBar value={search} onChange={setSearch} onClear={() => setSearch('')} placeholder={t.searchPlaceholder} className="topbar-search" /><div className="topbar-actions"><IconButton label={t.nav.messages} onClick={() => navigate('/messages')}><MessageCircle size={19} /></IconButton><IconButton label={t.nav.notifications} onClick={() => navigate('/notifications')}><Bell size={19} /></IconButton><LanguageToggle /><ThemeToggle /><Dropdown label={<><Avatar name={user.name} size="sm" /><span className="profile-label">{user.name}</span></>}><Link className="menu-item" to="/profile"><Users size={16} />{t.nav.profile}</Link><Link className="menu-item" to="/settings"><Settings size={16} />{t.nav.settings}</Link><button className="menu-item menu-item-danger" onClick={() => void logout}><LogOut size={16} />{t.actions.signOut}</button></Dropdown></div></header>
 }
 
 export function MemberLayout({ user }: { user: User }) {

@@ -1,12 +1,14 @@
 import axios from 'axios'
 
-const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1'
+const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
 const apiBaseUrl = (() => {
   if (typeof window === 'undefined') return configuredBaseUrl
   try {
     const url = new URL(configuredBaseUrl, window.location.origin)
     const localHosts = ['localhost', '127.0.0.1', '::1']
-    if (localHosts.includes(url.hostname) && localHosts.includes(window.location.hostname)) url.hostname = window.location.hostname
+    // A relative/same-origin base rides the same origin; only an explicitly
+    // configured absolute URL pointing at another host gets host-mirrored.
+    if (configuredBaseUrl.startsWith('http') && localHosts.includes(url.hostname) && localHosts.includes(window.location.hostname)) url.hostname = window.location.hostname
     return url.toString().replace(/\/$/, '')
   } catch { return configuredBaseUrl }
 })()

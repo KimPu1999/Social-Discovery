@@ -7,6 +7,7 @@ import { AdminLayout, AuthLayout, MemberLayout, PublicLayout, ThemeSync } from '
 import { ToastViewport } from './components/ui'
 import { DashboardPage } from './pages/DashboardPage'
 import './App.css'
+import './layout.css'
 import './responsive.css'
 import './features/discovery/discovery.css'
 

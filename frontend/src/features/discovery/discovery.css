@@ -23,7 +23,7 @@
 .discovery-grid-list { grid-template-columns: 1fr !important; }
 
 /* Profile card */
-.discovery-card { display: grid; gap: 12px; align-content: start; }
+.discovery-card { display: grid; gap: 12px; align-content: start; padding: 16px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); }
 .discovery-card-head { display: flex; align-items: flex-start; gap: 12px; }
 .discovery-card-id { display: grid; gap: 2px; min-width: 0; flex: 1; }
 .discovery-card-name { margin: 0; font-size: 15px; font-weight: 750; }
