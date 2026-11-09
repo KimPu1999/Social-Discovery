@@ -84,6 +84,7 @@ export function SettingsPage() {
           <Switch label={t.settings.showInterests} checked={privacyDraft.show_interests} onChange={(value) => setPrivacyDraft({ ...privacyDraft, show_interests: value })} />
           <Switch label={t.settings.showLocation} checked={privacyDraft.show_location} onChange={(value) => setPrivacyDraft({ ...privacyDraft, show_location: value })} />
           {privacyDirty && <Alert tone="warning" title={t.settings.unsaved}><div className="alert-actions"><Button variant="primary" size="sm" loading={updatePrivacy.isPending} onClick={savePrivacy}>{t.settings.save}</Button><Button variant="ghost" size="sm" onClick={() => privacy.data && setPrivacyDraft({ ...defaultPrivacy, ...privacy.data })}>{t.actions.cancel}</Button></div></Alert>}
+          <Link className="text-button" to="/settings/discovery"><SlidersHorizontal size={14} /> {t.discovery.settings.title}</Link>
         </>}
         {tab === 'security' && <>
           <form className="stack-form" onSubmit={(event) => { event.preventDefault(); void submitPassword(event) }}>

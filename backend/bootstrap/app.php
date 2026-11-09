@@ -1,10 +1,10 @@
 <?php
 
+use App\Http\Middleware\EnsureRole;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
-use App\Http\Middleware\EnsureRole;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -14,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // This is a JSON-only API behind a SPA: guests must get 401 responses,
+        // never a redirect to a (not defined) web login route.
+        $middleware->redirectGuestsTo(fn (): ?string => null);
         $middleware->statefulApi();
         $middleware->alias(['role' => EnsureRole::class]);
     })

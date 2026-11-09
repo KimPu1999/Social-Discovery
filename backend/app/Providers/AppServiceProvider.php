@@ -26,5 +26,9 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(10)->by(strtolower((string) $request->input('email')).'|'.$request->ip());
         });
         RateLimiter::for('sensitive', fn (Request $request) => Limit::perMinute(5)->by($request->user()?->id ?: $request->ip()));
+        // Discovery reads: generous but bounded per account to prevent scraping.
+        RateLimiter::for('discovery', fn (Request $request) => Limit::perMinute(60)->by($request->user()?->id ?: $request->ip()));
+        // Discovery writes (feedback, preferences): tighter budget.
+        RateLimiter::for('discovery-write', fn (Request $request) => Limit::perMinute(15)->by($request->user()?->id ?: $request->ip()));
     }
 }

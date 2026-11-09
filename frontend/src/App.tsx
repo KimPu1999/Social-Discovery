@@ -1,6 +1,6 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 import { Navigate, Outlet, Route, Routes, useOutletContext } from 'react-router-dom'
-import { Bell, CalendarDays, Compass, HeartHandshake, MessageCircle, Settings, ShieldCheck, Sparkles, Users } from 'lucide-react'
+import { Bell, CalendarDays, HeartHandshake, MessageCircle, Settings, ShieldCheck, Sparkles, Users } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { authService } from './services/authService'
 import { AdminLayout, AuthLayout, MemberLayout, PublicLayout, ThemeSync } from './layouts/AppLayouts'
@@ -8,6 +8,7 @@ import { ToastViewport } from './components/ui'
 import { DashboardPage } from './pages/DashboardPage'
 import './App.css'
 import './responsive.css'
+import './features/discovery/discovery.css'
 
 const HomePage = lazy(() => import('./pages/PublicPages').then((module) => ({ default: module.HomePage })))
 const PublicInfoPage = lazy(() => import('./pages/PublicPages').then((module) => ({ default: module.PublicInfoPage })))
@@ -20,6 +21,10 @@ const VerifyEmailPage = lazy(() => import('./features/auth/AuthPages').then((mod
 const VerifyResultPage = lazy(() => import('./features/auth/AuthPages').then((module) => ({ default: module.VerifyResultPage })))
 const ProfilePage = lazy(() => import('./features/profile/ProfilePage').then((module) => ({ default: module.ProfilePage })))
 const SettingsPage = lazy(() => import('./features/settings/SettingsPage').then((module) => ({ default: module.SettingsPage })))
+const DiscoverPage = lazy(() => import('./features/discovery/pages/DiscoverPage').then((module) => ({ default: module.DiscoverPage })))
+const PeopleExplorerPage = lazy(() => import('./features/discovery/pages/PeopleExplorerPage').then((module) => ({ default: module.PeopleExplorerPage })))
+const DiscoveryProfilePage = lazy(() => import('./features/discovery/pages/DiscoveryProfilePage').then((module) => ({ default: module.DiscoveryProfilePage })))
+const DiscoverySettingsPage = lazy(() => import('./features/discovery/pages/DiscoverySettingsPage').then((module) => ({ default: module.DiscoverySettingsPage })))
 const AdminUsersPage = lazy(() => import('./features/admin/AdminPage').then((module) => ({ default: module.AdminUsersPage })))
 
 function LoadingScreen() { return <div className="route-loading" role="status">Loading workspace…</div> }
@@ -68,8 +73,9 @@ export default function App() {
     <Route element={<ProtectedLayout />}>
       <Route element={<MemberShell />}>
         <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/discover" element={<Lazy><PlaceholderPage title="Discover" description="Find people and communities through the interests you share." icon={Compass} /></Lazy>} />
-        <Route path="/people" element={<Lazy><PlaceholderPage title="People" description="A thoughtful directory for meeting people with shared interests." icon={Users} /></Lazy>} />
+        <Route path="/discover" element={<Lazy><DiscoverPage /></Lazy>} />
+        <Route path="/people" element={<Lazy><PeopleExplorerPage /></Lazy>} />
+        <Route path="/people/:username" element={<Lazy><DiscoveryProfilePage /></Lazy>} />
         <Route path="/connections" element={<Lazy><PlaceholderPage title="Connections" description="Your growing circle, kept at your pace." icon={HeartHandshake} /></Lazy>} />
         <Route path="/feed" element={<Lazy><PlaceholderPage title="Feed" description="A future home for updates from your communities." icon={Sparkles} /></Lazy>} />
         <Route path="/messages" element={<Lazy><PlaceholderPage title="Messages" description="Private conversations are part of the next layer." icon={MessageCircle} /></Lazy>} />
@@ -78,6 +84,7 @@ export default function App() {
         <Route path="/notifications" element={<Lazy><PlaceholderPage title="Notifications" description="Your relevant updates will appear here as the platform grows." icon={Bell} /></Lazy>} />
         <Route path="/profile" element={<Lazy><ProfilePage /></Lazy>} />
         <Route path="/settings" element={<Lazy><SettingsPage /></Lazy>} />
+        <Route path="/settings/discovery" element={<Lazy><DiscoverySettingsPage /></Lazy>} />
       </Route>
     </Route>
     {/* Administration shell: role-aware navigation, protected routes. */}

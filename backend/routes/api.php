@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AccountController;
 use App\Http\Controllers\Api\V1\AdminUserController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\Discovery;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InterestController;
 use App\Http\Controllers\Api\V1\ProfileController;
@@ -49,6 +50,21 @@ Route::prefix('v1')->group(function (): void {
     });
 
     Route::get('/interests', [InterestController::class, 'index']);
+
+    // Phase 04 — Discovery & Smart Interest Matching (authenticated, verified users).
+    Route::middleware(['web', 'auth:sanctum', 'verified'])->prefix('discovery')->group(function (): void {
+        Route::middleware('throttle:discovery')->group(function (): void {
+            Route::get('/overview', [Discovery\DiscoveryController::class, 'overview']);
+            Route::get('/people', [Discovery\DiscoveryController::class, 'people']);
+            Route::get('/recommended', [Discovery\DiscoveryController::class, 'recommended']);
+            Route::get('/interests', [Discovery\DiscoveryController::class, 'interests']);
+            Route::get('/people/{username}', [Discovery\DiscoveryController::class, 'show'])->where('username', '[a-zA-Z0-9_.-]+');
+            Route::get('/preferences', [Discovery\DiscoveryPreferenceController::class, 'show']);
+        });
+        Route::put('/preferences', [Discovery\DiscoveryPreferenceController::class, 'update'])->middleware('throttle:discovery-write');
+        Route::post('/feedback', [Discovery\DiscoveryFeedbackController::class, 'store'])->middleware('throttle:discovery-write');
+        Route::delete('/feedback/{targetUserId}', [Discovery\DiscoveryFeedbackController::class, 'destroy'])->whereNumber('targetUserId')->middleware('throttle:discovery-write');
+    });
 
     Route::middleware(['web', 'auth:sanctum', 'verified', 'role:super_admin'])->prefix('admin')->group(function (): void {
         Route::get('/users', [AdminUserController::class, 'index']);

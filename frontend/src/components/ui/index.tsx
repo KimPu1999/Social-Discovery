@@ -69,7 +69,7 @@ export function Drawer({ open, title, onClose, children }: { open: boolean; titl
   return <div className="ui-drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}><aside className="ui-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title"><div className="ui-modal-header"><h2 id="drawer-title">{title}</h2><IconButton label="Close" onClick={onClose}><X size={18} /></IconButton></div>{children}</aside></div>
 }
 
-export function Switch({ checked, onChange, label }: { checked: boolean; onChange: (checked: boolean) => void; label: string }) { return <label className="ui-switch"><span>{label}</span><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} /><span className="ui-switch-track" aria-hidden="true" /></label> }
+export function Switch({ checked, onChange, label, disabled = false }: { checked: boolean; onChange: (checked: boolean) => void; label: string; disabled?: boolean }) { return <label className="ui-switch"><span>{label}</span><input type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} /><span className="ui-switch-track" aria-hidden="true" /></label> }
 
 export function Textarea({ label, error, hint, id, rows = 4, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement> & { label?: string; error?: string; hint?: string }) {
   const fieldId = id ?? `textarea-${label?.toLowerCase().replace(/[^a-z0-9]+/g, '-') ?? 'field'}`
