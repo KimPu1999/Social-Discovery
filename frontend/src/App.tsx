@@ -18,6 +18,8 @@ const PublicInfoPage = lazy(() => import('./pages/PublicPages').then((module) =>
 const FeaturesPage = lazy(() => import('./pages/PublicPages').then((module) => ({ default: module.FeaturesPage })))
 const ExplorePage = lazy(() => import('./pages/PublicPages').then((module) => ({ default: module.ExplorePage })))
 const CommunityGuidePage = lazy(() => import('./pages/PublicPages').then((module) => ({ default: module.CommunityGuidePage })))
+const AboutPage = lazy(() => import('./pages/PublicPages').then((module) => ({ default: module.AboutPage })))
+const ContactPage = lazy(() => import('./pages/PublicPages').then((module) => ({ default: module.ContactPage })))
 const PlaceholderPage = lazy(() => import('./pages/PlaceholderPage').then((module) => ({ default: module.PlaceholderPage })))
 const LoginPage = lazy(() => import('./features/auth/AuthPages').then((module) => ({ default: module.LoginPage })))
 const RegisterPage = lazy(() => import('./features/auth/AuthPages').then((module) => ({ default: module.RegisterPage })))
@@ -61,12 +63,12 @@ export default function App() {
   return <><ThemeSync /><ToastViewport /><Routes>
     <Route element={<PublicLayout />}>
       <Route path="/" element={<Lazy><HomePage /></Lazy>} />
-      <Route path="/about" element={<Lazy><PublicInfoPage title="About Social Discovery" description="A platform for finding community through shared interests and moving at a human pace." /></Lazy>} />
+      <Route path="/about" element={<Lazy><AboutPage /></Lazy>} />
       <Route path="/features" element={<Lazy><FeaturesPage /></Lazy>} />
       <Route path="/explore" element={<Lazy><ExplorePage /></Lazy>} />
       <Route path="/community-guide" element={<Lazy><CommunityGuidePage /></Lazy>} />
       <Route path="/event-guide" element={<Lazy><PublicInfoPage title="Events" description="Events will help people gather around shared interests and experiences." /></Lazy>} />
-      <Route path="/contact" element={<Lazy><PublicInfoPage title="Contact" description="A simple place to find support and share feedback." /></Lazy>} />
+      <Route path="/contact" element={<Lazy><ContactPage /></Lazy>} />
       <Route path="/privacy" element={<Lazy><PublicInfoPage title="Privacy Policy" description="Clear choices and respectful handling of personal data." /></Lazy>} />
       <Route path="/terms" element={<Lazy><PublicInfoPage title="Terms of Service" description="The shared expectations for participating here." /></Lazy>} />
       <Route path="/guidelines" element={<Lazy><PublicInfoPage title="Community Guidelines" description="Help make Social Discovery welcoming and safe." /></Lazy>} />
