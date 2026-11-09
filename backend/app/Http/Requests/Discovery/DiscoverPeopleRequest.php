@@ -19,7 +19,7 @@ class DiscoverPeopleRequest extends FormRequest
             'search' => ['sometimes', 'nullable', 'string', 'max:60'],
             'interest_ids' => ['sometimes', 'array', 'max:10'],
             'interest_ids.*' => ['integer', Rule::exists('interests', 'id')->where('is_active', true)],
-            'sort' => ['sometimes', Rule::in(['relevance', 'recently_joined', 'username'])],
+            'sort' => ['sometimes', Rule::in(['relevance', 'recently_joined', 'username', 'username_desc'])],
             'page' => ['sometimes', 'integer', 'min:1', 'max:10000'],
             'per_page' => ['sometimes', Rule::in([10, 20, 50])],
         ];

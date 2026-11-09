@@ -250,6 +250,32 @@ class PhaseFourDiscoveryTest extends TestCase
         $this->assertSame(['Aria Sun'], array_values(array_filter($hits, static fn ($name) => str_contains((string) $name, 'Aria'))));
     }
 
+    public function test_search_matches_public_bio_and_interest_name(): void
+    {
+        $viewer = $this->viewer();
+        $bioMatch = $this->eligibleUser(['name' => 'Quiet Member']);
+        $bioMatch->profile()->update(['bio' => 'Photographer and cyclist.']);
+        $interestMatch = $this->eligibleUser(['name' => 'Creative Member']);
+        $this->attach($interestMatch, 'Watercolor', category: 'Creative', slug: 'watercolor');
+
+        $bioHits = $this->actingAs($viewer)->getJson('/api/v1/discovery/people?search=photographer')->json('data.*.display_name');
+        $interestHits = $this->actingAs($viewer)->getJson('/api/v1/discovery/people?search=watercolor')->json('data.*.display_name');
+
+        $this->assertSame(['Quiet Member'], $bioHits);
+        $this->assertSame(['Creative Member'], $interestHits);
+    }
+
+    public function test_username_desc_sort_is_supported(): void
+    {
+        $viewer = $this->viewer();
+        $this->eligibleUser(['name' => 'Alpha']);
+        $this->eligibleUser(['name' => 'Zulu']);
+
+        $response = $this->actingAs($viewer)->getJson('/api/v1/discovery/people?sort=username_desc&per_page=50')->assertOk();
+
+        $this->assertSame(['username-3', 'username-2'], $response->json('data.*.username'));
+    }
+
     public function test_interest_filters_narrow_results(): void
     {
         $viewer = $this->viewer();

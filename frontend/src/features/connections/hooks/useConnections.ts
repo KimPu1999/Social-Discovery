@@ -32,6 +32,41 @@ function useSocialInvalidation() {
   }
 }
 
+type DiscoveryCacheSnapshot = [readonly unknown[], unknown][]
+
+/** Keep discovery cards responsive while the server confirms a follow change. */
+function useOptimisticDiscoveryFollow() {
+  const queryClient = useQueryClient()
+
+  return {
+    onMutate: async (userId: number, following: boolean): Promise<DiscoveryCacheSnapshot> => {
+      await queryClient.cancelQueries({ queryKey: discoveryKeys.all })
+      const snapshots = queryClient.getQueriesData({ queryKey: discoveryKeys.all })
+
+      queryClient.setQueriesData({ queryKey: discoveryKeys.all }, (current: unknown) => updateDiscoveryRelationship(current, userId, following))
+      return snapshots
+    },
+    onError: (_error: unknown, _userId: number, snapshots?: DiscoveryCacheSnapshot) => {
+      snapshots?.forEach(([key, value]) => queryClient.setQueryData(key, value))
+    },
+  }
+}
+
+function updateDiscoveryRelationship(current: unknown, userId: number, following: boolean): unknown {
+  const updateProfile = (profile: unknown) => {
+    if (!profile || typeof profile !== 'object' || (profile as { id?: number }).id !== userId) return profile
+    const value = profile as { relationship?: Record<string, unknown> | null }
+    if (!value.relationship) return profile
+    return { ...value, relationship: { ...value.relationship, is_following: following } }
+  }
+
+  if (Array.isArray(current)) return current.map(updateProfile)
+  if (!current || typeof current !== 'object') return current
+  const value = current as { data?: unknown; id?: number; relationship?: Record<string, unknown> | null }
+  if (Array.isArray(value.data)) return { ...value, data: value.data.map(updateProfile) }
+  return updateProfile(value)
+}
+
 export function useRelationship(userId: number, enabled = true) {
   return useQuery({ queryKey: connectionsKeys.relationship(userId), queryFn: () => connectionsApi.relationship(userId), enabled, staleTime: 15_000 })
 }
@@ -79,13 +114,18 @@ export function useUnreadNotificationCount(enabled = true) {
 /** Follow and unfollow share one hook so callers keep a single pending flag. */
 export function useFollowActions() {
   const invalidate = useSocialInvalidation()
+  const optimistic = useOptimisticDiscoveryFollow()
 
   const follow = useMutation({
     mutationFn: connectionsApi.follow,
+    onMutate: (userId) => optimistic.onMutate(userId, true),
+    onError: optimistic.onError,
     onSuccess: invalidate,
   })
   const unfollow = useMutation({
     mutationFn: connectionsApi.unfollow,
+    onMutate: (userId) => optimistic.onMutate(userId, false),
+    onError: optimistic.onError,
     onSuccess: invalidate,
   })
 

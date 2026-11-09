@@ -1,11 +1,14 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { CalendarDays } from 'lucide-react'
 import { useTranslation } from '../../../layouts/AppLayouts'
-import { Avatar, Badge, Button, InterestChip, Tooltip } from '../../../components/ui'
+import { Avatar, Button, ConfirmDialog, InterestChip, Tooltip, useToast } from '../../../components/ui'
 import { formatLocaleDate } from '../../../i18n'
 import { MatchExplanation, MatchScoreIndicator } from './MatchScoreIndicator'
 import { DiscoveryFeedbackMenu } from './DiscoveryFeedbackMenu'
 import { FollowButton } from '../../connections/components/FollowButton'
 import { ConnectionRequestButton } from '../../connections/components/ConnectionRequestButton'
+import { useBlockActions } from '../../connections/hooks/useConnections'
 import type { DiscoveryProfile, FeedbackType } from '../types'
 
 export type DiscoveryProfileCardProps = {
@@ -24,6 +27,9 @@ export type DiscoveryProfileCardProps = {
  */
 export function DiscoveryProfileCard({ profile, onFeedback, onUndoFeedback, hidden = false, busy = false, variant = 'grid' }: DiscoveryProfileCardProps) {
   const { t, locale } = useTranslation()
+  const toast = useToast()
+  const blockActions = useBlockActions()
+  const [blocking, setBlocking] = useState(false)
   const sharedInterests = profile.interests.filter((interest) => interest.shared_with_viewer)
   const otherInterests = profile.interests.filter((interest) => !interest.shared_with_viewer).slice(0, Math.max(0, 4 - sharedInterests.length))
 
@@ -40,7 +46,7 @@ export function DiscoveryProfileCard({ profile, onFeedback, onUndoFeedback, hidd
         </div>
         <div className="discovery-card-tools">
           <MatchScoreIndicator match={profile.match} />
-          {onFeedback ? <DiscoveryFeedbackMenu hidden={hidden} busy={busy} onFeedback={(type) => onFeedback(profile, type)} onUndoFeedback={onUndoFeedback ? () => onUndoFeedback(profile) : undefined} /> : null}
+          {onFeedback ? <DiscoveryFeedbackMenu hidden={hidden} busy={busy || blockActions.block.isPending} onFeedback={(type) => onFeedback(profile, type)} onUndoFeedback={onUndoFeedback ? () => onUndoFeedback(profile) : undefined} onBlock={profile.relationship ? () => setBlocking(true) : undefined} /> : null}
         </div>
       </header>
 
@@ -53,7 +59,7 @@ export function DiscoveryProfileCard({ profile, onFeedback, onUndoFeedback, hidd
       </div>
 
       <footer className="discovery-card-actions">
-        {profile.joined_at ? <Badge>{formatLocaleDate(profile.joined_at, locale)}</Badge> : null}
+        {profile.joined_at ? <span className="discovery-card-joined"><CalendarDays size={13} aria-hidden="true" />{formatLocaleDate(profile.joined_at, locale)}</span> : null}
         <div className="discovery-card-buttons">
           {/* Phase 05: live follow / connect controls when the API sent
               relationship state; otherwise keep the clearly-unavailable hint. */}
@@ -70,6 +76,20 @@ export function DiscoveryProfileCard({ profile, onFeedback, onUndoFeedback, hidd
           <Link className="ui-button ui-button-secondary ui-button-sm" to={`/people/${profile.username}`}>{t.discovery.card.viewProfile}</Link>
         </div>
       </footer>
+      <ConfirmDialog
+        open={blocking}
+        danger
+        title={t.connections.blocking.title.replace('{name}', profile.display_name)}
+        description={t.connections.blocking.copy}
+        confirmLabel={t.discovery.profile.blocking}
+        cancelLabel={t.actions.cancel}
+        loading={blockActions.block.isPending}
+        onClose={() => setBlocking(false)}
+        onConfirm={() => blockActions.block.mutate(profile.id, {
+          onSuccess: () => { setBlocking(false); toast('info', t.connections.blocking.done) },
+          onError: () => { setBlocking(false); toast('danger', t.connections.errors.actionFailed) },
+        })}
+      />
     </article>
   )
 }

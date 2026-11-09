@@ -22,12 +22,15 @@ export function DiscoveryFilterToolbar({ filters, onChange, onClearAll, interest
     { value: 'relevance', label: t.discovery.sort.relevance },
     { value: 'recently_joined', label: t.discovery.sort.recently_joined },
     { value: 'username', label: t.discovery.sort.username },
+    { value: 'username_desc', label: t.discovery.sort.username_desc },
   ]
   const hasFilters = Boolean(filters.search) || filters.interest_ids.length > 0 || filters.sort !== 'relevance'
+  const activeFilterCount = Number(Boolean(filters.search)) + filters.interest_ids.length + Number(filters.sort !== 'relevance')
 
   return (
     <div className="discovery-toolbar">
-      <DiscoverySearchBar value={filters.search} onDebouncedChange={(value) => onChange({ search: value, page: 1 })} />
+      <div className="discovery-toolbar-main">
+        <DiscoverySearchBar value={filters.search} onDebouncedChange={(value) => onChange({ search: value, page: 1 })} />
       <div className="discovery-toolbar-row">
         <Dropdown align="left" label={<span>{t.discovery.sort.label}</span>}>
           {sortOptions.map((option) => (
@@ -41,7 +44,9 @@ export function DiscoveryFilterToolbar({ filters, onChange, onClearAll, interest
           <IconButton label={t.discovery.people.gridView} className={view === 'grid' ? 'is-active' : ''} onClick={() => onViewChange('grid')}><LayoutGrid size={17} /></IconButton>
           <IconButton label={t.discovery.people.listView} className={view === 'list' ? 'is-active' : ''} onClick={() => onViewChange('list')}><List size={17} /></IconButton>
         </div>
+        {activeFilterCount ? <span className="discovery-active-filter-count" aria-live="polite">{t.discovery.people.activeFilters.replace('{count}', String(activeFilterCount))}</span> : null}
         {hasFilters ? <button className="text-button" onClick={onClearAll}>{t.filters.reset}</button> : <span className="discovery-toolbar-spacer" aria-hidden="true"><SlidersHorizontal size={15} /></span>}
+      </div>
       </div>
       {filters.interest_ids.length ? (
         <div className="ui-filter-chips">

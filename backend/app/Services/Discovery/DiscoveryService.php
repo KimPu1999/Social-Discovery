@@ -36,10 +36,15 @@ class DiscoveryService
 
         if (! empty($filters['search'])) {
             $term = trim((string) $filters['search']);
+            $containsLike = '%'.strtr(mb_strtolower($term), ['\\' => '\\\\', '%' => '\\%', '_' => '\\_']).'%';
             $like = str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], mb_strtolower($term)).'%';
-            $query->where(static function ($sub) use ($like): void {
+            $query->where(static function ($sub) use ($like, $containsLike): void {
                 $sub->whereRaw('lower(up.display_name) like ?', [$like])
-                    ->orWhereRaw('lower(up.username) like ?', [$like]);
+                    ->orWhereRaw('lower(up.username) like ?', [$like])
+                    ->orWhereRaw("lower(coalesce(up.bio, '')) like ?", [$containsLike])
+                    ->orWhereHas('interests', static function ($interestQuery) use ($containsLike): void {
+                        $interestQuery->where('is_active', true)->whereRaw('lower(name) like ?', [$containsLike]);
+                    });
             });
         }
 
@@ -54,6 +59,7 @@ class DiscoveryService
                 ? $query->orderBy('up.username')
                 : $query->orderByRaw($this->recommender->sharedCountExpression($viewer).' desc')->orderBy('up.username'),
             'recently_joined' => $query->orderByDesc('users.created_at'),
+            'username_desc' => $query->orderByDesc('up.username'),
             default => $query->orderBy('up.username'),
         };
         // Stable deterministic tie-breaker for every sort.

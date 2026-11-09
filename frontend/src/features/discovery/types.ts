@@ -57,7 +57,7 @@ export type DiscoveryPreferences = {
   preferred_interest_categories: string[]
 }
 
-export type PeopleSort = 'relevance' | 'recently_joined' | 'username'
+export type PeopleSort = 'relevance' | 'recently_joined' | 'username' | 'username_desc'
 export type PeoplePerPage = 10 | 20 | 50
 export type FeedbackType = 'not_interested' | 'hide_profile'
 
@@ -71,7 +71,7 @@ export type PeopleFilters = {
 }
 
 export const PEOPLE_PER_PAGE_OPTIONS = [10, 20, 50] as const
-export const PEOPLE_SORTS = ['relevance', 'recently_joined', 'username'] as const
+export const PEOPLE_SORTS = ['relevance', 'recently_joined', 'username', 'username_desc'] as const
 
 export type PaginationMeta = { current_page: number; last_page: number; per_page: number; total: number }
 export type PeoplePage = { data: DiscoveryProfile[]; meta: PaginationMeta }
