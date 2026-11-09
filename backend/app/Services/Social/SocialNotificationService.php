@@ -15,6 +15,7 @@ use App\Notifications\PostSharedNotification;
 use App\Notifications\SocialNotification;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Single entry point for social notification persistence and reads.
@@ -33,12 +34,25 @@ class SocialNotificationService
     /** Send `notification` to `notifiable` unless an identical unread one exists. */
     public function send(User $notifiable, SocialNotification $notification): void
     {
-        $exists = $notifiable->notifications()
+        $query = $notifiable->notifications()
             ->where('type', $notification::class)
-            ->whereNull('read_at')
-            ->where('data->type', $notification::type())
-            ->where('data->actor->id', $notification->actor->getKey())
-            ->exists();
+            ->whereNull('read_at');
+
+        // Older PostgreSQL installations used the Laravel notification
+        // default (`text`) for data. JSON operators cannot be applied to a
+        // text column, so cast during the transition to jsonb. SQLite keeps
+        // the JSON-path grammar used by the test database.
+        if (DB::connection()->getDriverName() === 'pgsql') {
+            $query
+                ->whereRaw("(notifications.data::jsonb)->>'type' = ?", [$notification::type()])
+                ->whereRaw("(notifications.data::jsonb)->'actor'->>'id' = ?", [(string) $notification->actor->getKey()]);
+        } else {
+            $query
+                ->where('data->type', $notification::type())
+                ->where('data->actor->id', $notification->actor->getKey());
+        }
+
+        $exists = $query->exists();
 
         if (! $exists) {
             $notifiable->notify($notification);
