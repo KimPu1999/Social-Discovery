@@ -45,6 +45,7 @@ function ProtectedLayout({ roles }: { roles?: string[] }) {
   const query = useQuery({ queryKey: ['me'], queryFn: authService.me, retry: false })
   if (query.isLoading) return <LoadingScreen />
   if (query.error || !query.data) return <Navigate to="/login" replace />
+  if (query.data.email_verified === false) return <Navigate to="/verify-email" replace />
   if (roles && !roles.includes(query.data.user.role)) return <PlaceholderPage title="Access restricted" description="Your account does not have permission to open this workspace." icon={ShieldCheck} />
   return <Outlet context={query.data.user} />
 }

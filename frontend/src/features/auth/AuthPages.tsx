@@ -34,7 +34,13 @@ export function LoginPage() {
   const { t } = useTranslation()
   const schemas = buildSchemas(t)
   const form = useForm<LoginValues>({ resolver: zodResolver(schemas.login), defaultValues: { remember: false } })
-  const mutation = useMutation({ mutationFn: authService.login, onSuccess: (data) => navigate(data.user.role === 'super_admin' ? '/admin/overview' : data.user.role === 'moderator' ? '/moderator/overview' : '/dashboard') })
+  const mutation = useMutation({ mutationFn: authService.login, onSuccess: (data) => {
+    if (data.email_verified === false) {
+      navigate('/verify-email')
+      return
+    }
+    navigate(data.user.role === 'super_admin' ? '/admin/overview' : data.user.role === 'moderator' ? '/moderator/overview' : '/dashboard')
+  } })
   return <div className="auth-card"><p className="eyebrow">{t.auth.welcomeBack}</p><h1>{t.auth.signInTitle}</h1><p className="muted">{t.auth.signInCopy}</p><form onSubmit={form.handleSubmit((values) => mutation.mutate(values))}><label>{t.auth.emailOrUsername}<input {...form.register('email')} placeholder={t.auth.emailPlaceholder} autoComplete="username" aria-invalid={Boolean(form.formState.errors.email)} /><FieldError message={form.formState.errors.email?.message} /></label><label>{t.auth.password}<PasswordField register={form.register as UseFormRegister<Record<string, string | boolean>>} name="password" error={form.formState.errors.password?.message} t={t} /></label><div className="form-row"><label className="check"><input type="checkbox" {...form.register('remember')} /> {t.auth.rememberMe}</label><Link to="/forgot-password">{t.auth.forgotPassword}</Link></div>{mutation.error && <div className="form-alert" role="alert">{(mutation.error as { message?: string }).message}</div>}<button className="button full" disabled={mutation.isPending} type="submit" aria-busy={mutation.isPending}>{mutation.isPending ? t.auth.signingIn : t.actions.signIn} <LogIn size={16} /></button></form><p className="auth-switch">{t.auth.noAccount} <Link to="/register">{t.auth.createAccount}</Link></p></div>
 }
 

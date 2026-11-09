@@ -80,7 +80,22 @@ class DashboardController extends Controller
             ->values()->all();
 
         return response()->json(['data' => [
-            'profile' => ProfileResource::make($profile)->resolve(),
+            // Older accounts may not have a profile row yet. Keep the
+            // dashboard usable while the profile page repairs that state.
+            'profile' => $profile
+                ? ProfileResource::make($profile)->resolve($request)
+                : [
+                    'id' => null,
+                    'display_name' => $viewer->name,
+                    'username' => $viewer->username,
+                    'bio' => null,
+                    'location' => null,
+                    'website_url' => null,
+                    'avatar_url' => null,
+                    'cover_image_url' => null,
+                    'onboarding_completed_at' => null,
+                    'interests' => [],
+                ],
             'profile_completion' => ['percentage' => array_sum($completionFields), 'missing' => array_keys(array_filter($completionFields, static fn (int $value): bool => $value === 0))],
             'connection_summary' => [
                 'connections' => $connectionCount,
@@ -90,7 +105,7 @@ class DashboardController extends Controller
             ],
             'suggested_people' => $suggestedPeople,
             'recent_activity' => $activity,
-            'feed_preview' => PostResource::collection($feed['data'])->resolve(),
+            'feed_preview' => PostResource::collection($feed['data'])->resolve($request),
             'interests' => $trending,
             'discovery_status' => [
                 'enabled' => (bool) ($preference?->discovery_enabled ?? false),
