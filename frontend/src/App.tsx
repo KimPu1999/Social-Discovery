@@ -15,6 +15,7 @@ import './features/connections/connections.css'
 const HomePage = lazy(() => import('./pages/PublicPages').then((module) => ({ default: module.HomePage })))
 const PublicInfoPage = lazy(() => import('./pages/PublicPages').then((module) => ({ default: module.PublicInfoPage })))
 const FeaturesPage = lazy(() => import('./pages/PublicPages').then((module) => ({ default: module.FeaturesPage })))
+const ExplorePage = lazy(() => import('./pages/PublicPages').then((module) => ({ default: module.ExplorePage })))
 const PlaceholderPage = lazy(() => import('./pages/PlaceholderPage').then((module) => ({ default: module.PlaceholderPage })))
 const LoginPage = lazy(() => import('./features/auth/AuthPages').then((module) => ({ default: module.LoginPage })))
 const RegisterPage = lazy(() => import('./features/auth/AuthPages').then((module) => ({ default: module.RegisterPage })))
@@ -59,7 +60,7 @@ export default function App() {
       <Route path="/" element={<Lazy><HomePage /></Lazy>} />
       <Route path="/about" element={<Lazy><PublicInfoPage title="About Social Discovery" description="A platform for finding community through shared interests and moving at a human pace." /></Lazy>} />
       <Route path="/features" element={<Lazy><FeaturesPage /></Lazy>} />
-      <Route path="/explore" element={<Lazy><PublicInfoPage title="Discover" description="Discovery will open up as people, interests, and communities become available." /></Lazy>} />
+      <Route path="/explore" element={<Lazy><ExplorePage /></Lazy>} />
       <Route path="/community-guide" element={<Lazy><PublicInfoPage title="Communities" description="Community spaces will be introduced with clear guidelines and thoughtful moderation." /></Lazy>} />
       <Route path="/event-guide" element={<Lazy><PublicInfoPage title="Events" description="Events will help people gather around shared interests and experiences." /></Lazy>} />
       <Route path="/contact" element={<Lazy><PublicInfoPage title="Contact" description="A simple place to find support and share feedback." /></Lazy>} />

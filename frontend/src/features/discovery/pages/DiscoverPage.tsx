@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Sparkles, Users } from 'lucide-react'
+import { ArrowRight, Compass, Filter, Sparkles, Users } from 'lucide-react'
 import { useTranslation } from '../../../layouts/AppLayouts'
-import { Alert, Badge, Button, Card, CardHeader, useToast } from '../../../components/ui'
+import { Alert, Badge, Button, Card, useToast } from '../../../components/ui'
 import { DEFAULT_PEOPLE_FILTERS } from '../hooks/useDiscoveryFilters'
 import type { PeopleFilters } from '../types'
 import { useDiscoverPeople, useDiscoveryFeedback, useDiscoveryOverview, useRecommendedPeople } from '../hooks/useDiscovery'
@@ -29,8 +29,10 @@ export function DiscoverPage() {
     () => ({ ...DEFAULT_PEOPLE_FILTERS, per_page: 20, search, interest_ids: selectedInterests }),
     [search, selectedInterests],
   )
-  const people = useDiscoverPeople(filters)
+  const people = useDiscoverPeople(filters, enabled)
   const feedback = useDiscoveryFeedback()
+  const recommendedIds = new Set((recommended.data ?? []).map((profile) => profile.id))
+  const explorePeople = (people.data?.data ?? []).filter((profile) => !recommendedIds.has(profile.id))
 
   const onFeedback = (profile: DiscoveryProfile, type: FeedbackType) => {
     feedback.give.mutate({ targetUserId: profile.id, feedbackType: type }, {
@@ -40,10 +42,10 @@ export function DiscoverPage() {
   }
 
   return (
-    <div className="discovery-page">
-      <header className="discovery-page-header">
+    <div className="discovery-page discovery-page-redesign">
+      <header className="discovery-page-header discovery-hero">
         <div>
-          <p className="eyebrow">{t.nav.discover}</p>
+          <div className="discovery-hero-label"><span className="feature-icon"><Compass size={16} /></span><p className="eyebrow">{t.nav.discover}</p></div>
           <h1>{t.discovery.title}</h1>
           <p>{t.discovery.intro}</p>
         </div>
@@ -55,18 +57,13 @@ export function DiscoverPage() {
       ) : overview.data ? (
         <>
           <section aria-label={t.discovery.title} className="discovery-summary">
-            <Card className="discovery-summary-card">
-              <div className="discovery-summary-status">
-                <Badge tone={enabled ? 'success' : 'warning'}>{enabled ? t.discovery.badgeOn : t.discovery.badgeOff}</Badge>
-                <Link className="text-button" to="/settings/discovery">{t.discovery.openSettings}</Link>
-              </div>
-              <dl className="discovery-summary-counts">
-                <div><dt><Users size={15} aria-hidden="true" /> {t.discovery.overview.discoverable}</dt><dd>{overview.data.counts.discoverable_people}</dd></div>
-                <div><dt><Sparkles size={15} aria-hidden="true" /> {t.discovery.overview.recommended}</dt><dd>{overview.data.counts.recommended_people}</dd></div>
-                <div><dt>{t.discovery.overview.mine}</dt><dd>{overview.data.counts.my_interests}</dd></div>
-                <div><dt>{t.discovery.overview.hidden}</dt><dd>{overview.data.counts.hidden_profiles}</dd></div>
-              </dl>
-            </Card>
+            <div className="discovery-summary-top"><div><Badge tone={enabled ? 'success' : 'warning'}>{enabled ? t.discovery.badgeOn : t.discovery.badgeOff}</Badge>{enabled ? <p>{t.discovery.recommended.copy}</p> : null}</div><Link className="ui-button ui-button-soft ui-button-sm" to="/settings/discovery">{t.discovery.openSettings}<ArrowRight size={14} /></Link></div>
+            <dl className="discovery-summary-counts">
+              <div><dt><Users size={15} aria-hidden="true" /> {t.discovery.overview.discoverable}</dt><dd>{overview.data.counts.discoverable_people}</dd></div>
+              <div><dt><Sparkles size={15} aria-hidden="true" /> {t.discovery.overview.recommended}</dt><dd>{overview.data.counts.recommended_people}</dd></div>
+              <div><dt>{t.discovery.overview.mine}</dt><dd>{overview.data.counts.my_interests}</dd></div>
+              <div><dt>{t.discovery.overview.hidden}</dt><dd>{overview.data.counts.hidden_profiles}</dd></div>
+            </dl>
           </section>
 
           {!enabled && <Alert tone="warning" title={t.discovery.empty.disabled}>{t.discovery.empty.disabledCopy}</Alert>}
@@ -81,7 +78,7 @@ export function DiscoverPage() {
               />
 
               <section aria-labelledby="interests-title">
-                <CardHeader title={t.discovery.explore.title} eyebrow={t.discovery.explore.copy} />
+                <div className="discovery-section-heading"><div><p className="eyebrow">{t.discovery.explore.copy}</p><h2>{t.discovery.explore.title}</h2></div><span className="discovery-section-icon"><Filter size={16} /></span></div>
                 <InterestFilterChips
                   selected={selectedInterests}
                   onToggle={(id) => setSelectedInterests((value) => value.includes(id) ? value.filter((x) => x !== id) : [...value, id])}
@@ -90,17 +87,17 @@ export function DiscoverPage() {
               </section>
 
               <section aria-labelledby="explore-people-title">
-                <CardHeader title={t.discovery.explore.byInterests} eyebrow={t.discovery.people.intro} />
+                <div className="discovery-section-heading"><div><p className="eyebrow">{t.discovery.people.intro}</p><h2>{t.discovery.explore.byInterests}</h2></div><span className="discovery-section-icon"><Users size={16} /></span></div>
                 {people.isLoading ? <DiscoverySkeleton /> : people.isError ? (
                   <Card><DiscoveryEmptyState variant="noResults" action={<Button variant="soft" onClick={() => void people.refetch()}>{t.discovery.error.retry}</Button>} /></Card>
-                ) : (people.data?.data.length ?? 0) === 0 ? (
+                ) : explorePeople.length === 0 ? (
                   selectedInterests.length
                     ? <DiscoveryEmptyState variant="noMatchingInterests" action={<Button variant="soft" onClick={() => setSelectedInterests([])}>{t.filters.clear}</Button>} />
                     : search
                       ? <DiscoveryEmptyState variant="noResults" action={<Button variant="soft" onClick={() => setSearch('')}>{t.filters.clear}</Button>} />
                       : <DiscoveryEmptyState variant="noEligible" />
                 ) : (
-                  <PeopleGrid people={people.data?.data ?? []} onFeedback={onFeedback} />
+                  <PeopleGrid people={explorePeople} onFeedback={onFeedback} />
                 )}
               </section>
             </>

@@ -17,12 +17,13 @@ export function useDiscoveryOverview() {
   return useQuery({ queryKey: discoveryKeys.overview(), queryFn: discoveryApi.overview, staleTime: 30_000 })
 }
 
-export function useDiscoverPeople(filters: PeopleFilters) {
+export function useDiscoverPeople(filters: PeopleFilters, enabled = true) {
   return useQuery({
     queryKey: discoveryKeys.people(filters),
     queryFn: () => discoveryApi.people(filters),
     placeholderData: keepPreviousData,
     staleTime: 15_000,
+    enabled,
   })
 }
 
