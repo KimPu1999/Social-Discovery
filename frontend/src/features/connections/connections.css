@@ -1,0 +1,53 @@
+/* Phase 05 — connections workspace, request cards, notifications. */
+
+/* Social stats strip in the discovery profile hero */
+.discovery-profile-social-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin: 4px 0 0; }
+.discovery-profile-social-counts div { display: grid; gap: 2px; padding: 10px 12px; border-radius: var(--radius-md); background: var(--color-surface-muted); }
+.discovery-profile-social-counts dt { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 750; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-secondary); }
+.discovery-profile-social-counts dd { margin: 0; font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+.connections-page { display: grid; gap: 16px; max-width: 1180px; }
+.connections-page > .page-copy { margin: -6px 0 0; color: var(--color-text-secondary); max-width: 62ch; }
+
+/* One person row inside every list */
+.social-row { display: flex; align-items: center; gap: 14px; padding: 12px 4px; border-bottom: 1px solid var(--color-border); border-radius: 0; }
+.connections-list-rows .social-row:last-child { border-bottom: 0; }
+.social-row-id { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.social-row-name { margin: 0; font-size: 15px; font-weight: 700; }
+.social-row-name a { color: inherit; text-decoration: none; }
+.social-row-name a:hover { color: var(--color-primary); }
+.social-row-username { margin: 0; font-size: 11px; font-weight: 700; color: var(--color-text-secondary); }
+.social-row-bio { margin: 2px 0 0; font-size: 12px; line-height: 1.5; color: var(--color-text-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.social-row-state { margin: 2px 0 0; font-size: 11px; font-weight: 700; color: var(--color-text-secondary); }
+.social-row-actions { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.social-row-compact .social-row-bio { -webkit-line-clamp: 1; }
+.social-row-skeleton { display: block; height: 56px; border-radius: var(--radius-md); }
+
+/* List chrome shared by connections and notifications */
+.connections-list { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
+.connections-list-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.connections-toolbar { display: inline-flex; align-items: center; gap: 8px; min-width: min(320px, 100%); color: var(--color-text-secondary); }
+.connections-toolbar input { flex: 1; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-muted); color: inherit; font: inherit; }
+.connections-toolbar input:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+.connections-count { margin: 0; font-size: 12px; font-weight: 750; color: var(--color-text-secondary); }
+.connections-list-rows { display: grid; }
+.connections-hint { margin: 10px 4px 0; font-size: 11px; color: var(--color-text-secondary); }
+
+/* Notification rows */
+.notifications-page { display: grid; gap: 16px; max-width: 980px; }
+.notifications-page > .page-copy { margin: -6px 0 0; color: var(--color-text-secondary); max-width: 62ch; }
+.notifications-actions { display: flex; justify-content: flex-end; }
+.notification-row { display: flex; align-items: flex-start; gap: 14px; padding: 12px 4px; border-bottom: 1px solid var(--color-border); }
+.connections-list-rows .notification-row:last-child { border-bottom: 0; }
+.notification-row.is-unread { background: var(--color-primary-soft, #6366f10d); border-radius: var(--radius-md); }
+.notification-copy { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.notification-copy p { margin: 0; font-size: 13px; line-height: 1.5; }
+.notification-copy .ui-badge { margin-left: 8px; vertical-align: middle; }
+.notification-date { font-size: 11px !important; font-weight: 700; color: var(--color-text-secondary); }
+.notification-actions { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+
+@media (max-width: 640px) {
+  .social-row { flex-wrap: wrap; }
+  .social-row-actions { width: 100%; justify-content: flex-end; }
+  .notification-row { flex-wrap: wrap; }
+}

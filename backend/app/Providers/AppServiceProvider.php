@@ -2,8 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\User;
+use App\Policies\SocialPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -22,6 +25,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Single authoritative policy for user-to-user social authorization.
+        Gate::policy(User::class, SocialPolicy::class);
+
         RateLimiter::for('auth', function (Request $request) {
             return Limit::perMinute(10)->by(strtolower((string) $request->input('email')).'|'.$request->ip());
         });
@@ -30,5 +36,7 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('discovery', fn (Request $request) => Limit::perMinute(60)->by($request->user()?->id ?: $request->ip()));
         // Discovery writes (feedback, preferences): tighter budget.
         RateLimiter::for('discovery-write', fn (Request $request) => Limit::perMinute(15)->by($request->user()?->id ?: $request->ip()));
+        // Social writes (follow, requests, blocks): bounded per account.
+        RateLimiter::for('social-write', fn (Request $request) => Limit::perMinute(30)->by($request->user()?->id ?: $request->ip()));
     }
 }

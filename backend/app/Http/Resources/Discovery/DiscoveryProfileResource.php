@@ -45,6 +45,8 @@ class DiscoveryProfileResource extends JsonResource
                     'category' => $interest->category,
                 ]),
             ],
+            // Batched, authorization-safe relationship state (null when uncomputed).
+            'relationship' => $user->getAttribute('relationship_state'),
         ];
     }
 }

@@ -8,6 +8,12 @@ use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InterestController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\SettingsController;
+use App\Http\Controllers\Api\V1\Social\BlockingController;
+use App\Http\Controllers\Api\V1\Social\ConnectionController;
+use App\Http\Controllers\Api\V1\Social\ConnectionRequestController;
+use App\Http\Controllers\Api\V1\Social\FollowController;
+use App\Http\Controllers\Api\V1\Social\MutualConnectionController;
+use App\Http\Controllers\Api\V1\Social\NotificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -64,6 +70,35 @@ Route::prefix('v1')->group(function (): void {
         Route::put('/preferences', [Discovery\DiscoveryPreferenceController::class, 'update'])->middleware('throttle:discovery-write');
         Route::post('/feedback', [Discovery\DiscoveryFeedbackController::class, 'store'])->middleware('throttle:discovery-write');
         Route::delete('/feedback/{targetUserId}', [Discovery\DiscoveryFeedbackController::class, 'destroy'])->whereNumber('targetUserId')->middleware('throttle:discovery-write');
+    });
+
+    // Phase 05 — Social connections, follows, friend requests, blocking (authenticated, verified users).
+    Route::middleware(['web', 'auth:sanctum', 'verified'])->group(function (): void {
+        Route::middleware('throttle:social-write')->group(function (): void {
+            Route::post('/users/{user}/follow', [FollowController::class, 'follow'])->whereNumber('user');
+            Route::delete('/users/{user}/follow', [FollowController::class, 'unfollow'])->whereNumber('user');
+            Route::post('/users/{user}/block', [BlockingController::class, 'block'])->whereNumber('user');
+            Route::delete('/users/{user}/block', [BlockingController::class, 'unblock'])->whereNumber('user');
+            Route::post('/connections/requests', [ConnectionRequestController::class, 'store']);
+            Route::post('/connections/requests/{requestId}/accept', [ConnectionRequestController::class, 'accept'])->whereNumber('requestId');
+            Route::post('/connections/requests/{requestId}/decline', [ConnectionRequestController::class, 'decline'])->whereNumber('requestId');
+            Route::post('/connections/requests/{requestId}/cancel', [ConnectionRequestController::class, 'cancel'])->whereNumber('requestId');
+            Route::delete('/connections/{user}', [ConnectionController::class, 'destroy'])->whereNumber('user');
+            Route::post('/notifications/read-all', [NotificationController::class, 'readAll']);
+            Route::post('/notifications/{notificationId}/read', [NotificationController::class, 'read'])->whereUuid('notificationId');
+        });
+
+        Route::get('/users/{user}/relationship', [FollowController::class, 'relationship'])->whereNumber('user');
+        Route::get('/users/{user}/followers', [FollowController::class, 'followers'])->whereNumber('user');
+        Route::get('/users/{user}/following', [FollowController::class, 'following'])->whereNumber('user');
+        Route::get('/users/{user}/connections', [ConnectionController::class, 'forUser'])->whereNumber('user');
+        Route::get('/users/{user}/mutual-connections', [MutualConnectionController::class, 'show'])->whereNumber('user');
+        Route::get('/connections', [ConnectionController::class, 'index']);
+        Route::get('/connections/requests/incoming', [ConnectionRequestController::class, 'incoming']);
+        Route::get('/connections/requests/outgoing', [ConnectionRequestController::class, 'outgoing']);
+        Route::get('/settings/blocked-users', [BlockingController::class, 'index']);
+        Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
     });
 
     Route::middleware(['web', 'auth:sanctum', 'verified', 'role:super_admin'])->prefix('admin')->group(function (): void {

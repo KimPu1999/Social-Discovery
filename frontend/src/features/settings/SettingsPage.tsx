@@ -16,9 +16,9 @@ const tabs = ['account', 'profile', 'privacy', 'security', 'notifications', 'app
 type Tab = (typeof tabs)[number]
 const password = z.string().min(8).regex(/[A-Z]/).regex(/[a-z]/).regex(/[0-9]/)
 
-type PrivacyDraft = Pick<PrivacySettings, 'profile_visibility' | 'discovery_enabled' | 'allow_message_requests' | 'allow_connection_requests' | 'show_interests' | 'show_location' | 'show_online_status'>
+type PrivacyDraft = Pick<PrivacySettings, 'profile_visibility' | 'discovery_enabled' | 'allow_message_requests' | 'allow_connection_requests' | 'allow_follows' | 'show_interests' | 'show_location' | 'show_followers' | 'show_following' | 'show_connections' | 'show_mutual_connections' | 'show_online_status'>
 
-const defaultPrivacy: PrivacyDraft = { profile_visibility: 'public', discovery_enabled: false, allow_message_requests: true, allow_connection_requests: true, show_interests: true, show_location: false, show_online_status: false }
+const defaultPrivacy: PrivacyDraft = { profile_visibility: 'public', discovery_enabled: false, allow_message_requests: true, allow_connection_requests: true, allow_follows: true, show_interests: true, show_location: false, show_online_status: false, show_followers: true, show_following: true, show_connections: true, show_mutual_connections: true }
 
 export function SettingsPage() {
   const { t } = useTranslation()
@@ -81,6 +81,11 @@ export function SettingsPage() {
           <Switch label={t.settings.discoveryEnabled} checked={privacyDraft.discovery_enabled} onChange={(value) => setPrivacyDraft({ ...privacyDraft, discovery_enabled: value })} />
           <Switch label={t.settings.allowConnectionRequests} checked={privacyDraft.allow_connection_requests} onChange={(value) => setPrivacyDraft({ ...privacyDraft, allow_connection_requests: value })} />
           <Switch label={t.settings.allowMessageRequests} checked={privacyDraft.allow_message_requests} onChange={(value) => setPrivacyDraft({ ...privacyDraft, allow_message_requests: value })} />
+          <Switch label={t.settings.allowFollows} checked={privacyDraft.allow_follows} onChange={(value) => setPrivacyDraft({ ...privacyDraft, allow_follows: value })} />
+          <Switch label={t.settings.showFollowers} checked={privacyDraft.show_followers} onChange={(value) => setPrivacyDraft({ ...privacyDraft, show_followers: value })} />
+          <Switch label={t.settings.showFollowing} checked={privacyDraft.show_following} onChange={(value) => setPrivacyDraft({ ...privacyDraft, show_following: value })} />
+          <Switch label={t.settings.showConnections} checked={privacyDraft.show_connections} onChange={(value) => setPrivacyDraft({ ...privacyDraft, show_connections: value })} />
+          <Switch label={t.settings.showMutualConnections} checked={privacyDraft.show_mutual_connections} onChange={(value) => setPrivacyDraft({ ...privacyDraft, show_mutual_connections: value })} />
           <Switch label={t.settings.showInterests} checked={privacyDraft.show_interests} onChange={(value) => setPrivacyDraft({ ...privacyDraft, show_interests: value })} />
           <Switch label={t.settings.showLocation} checked={privacyDraft.show_location} onChange={(value) => setPrivacyDraft({ ...privacyDraft, show_location: value })} />
           {privacyDirty && <Alert tone="warning" title={t.settings.unsaved}><div className="alert-actions"><Button variant="primary" size="sm" loading={updatePrivacy.isPending} onClick={savePrivacy}>{t.settings.save}</Button><Button variant="ghost" size="sm" onClick={() => privacy.data && setPrivacyDraft({ ...defaultPrivacy, ...privacy.data })}>{t.actions.cancel}</Button></div></Alert>}

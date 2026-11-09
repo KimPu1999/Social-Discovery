@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\SocialConflictException;
 use App\Http\Middleware\EnsureRole;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -23,5 +24,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
+        );
+
+        // Social layer conflicts (duplicates, state races, blocking) are 409s.
+        $exceptions->renderable(
+            fn (SocialConflictException $exception, Request $request) => $request->is('api/*') || $request->expectsJson()
+                ? response()->json(['message' => $exception->getMessage()], 409)
+                : null,
         );
     })->create();

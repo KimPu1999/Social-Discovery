@@ -18,6 +18,8 @@ export type DiscoveryProfile = {
   joined_at?: string | null
   interests: DiscoveryInterest[]
   match: DiscoveryMatch | null
+  /** Phase 05: orientation-safe relationship state, present only when computed by the API. */
+  relationship?: import('../connections/types').RelationshipState | null
 }
 
 /** Public profile preview from DiscoveryProfileDetailResource. */

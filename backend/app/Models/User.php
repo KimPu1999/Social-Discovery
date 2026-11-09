@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ConnectionRequestStatus;
 use App\Notifications\ResetPasswordNotification;
 use App\Notifications\VerifyEmailNotification;
 use Database\Factories\UserFactory;
@@ -68,6 +69,62 @@ class User extends Authenticatable implements MustVerifyEmailContract
     public function blockedBy(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'user_blocks', 'blocked_user_id', 'user_id');
+    }
+
+    /** Follow edges where this user is the follower. */
+    public function followings(): HasMany
+    {
+        return $this->hasMany(UserFollow::class, 'follower_id');
+    }
+
+    /** Follow edges pointing at this user. */
+    public function followers(): HasMany
+    {
+        return $this->hasMany(UserFollow::class, 'following_id');
+    }
+
+    /** Outgoing connection requests sent by this user. */
+    public function sentConnectionRequests(): HasMany
+    {
+        return $this->hasMany(ConnectionRequest::class, 'sender_id');
+    }
+
+    /** Incoming connection requests addressed to this user. */
+    public function receivedConnectionRequests(): HasMany
+    {
+        return $this->hasMany(ConnectionRequest::class, 'receiver_id');
+    }
+
+    /** Accepted connection row between this user and the given user, if any. */
+    public static function connectionWith(int $userOne, int $userTwo): ?UserConnection
+    {
+        [$smaller, $larger] = [min($userOne, $userTwo), max($userOne, $userTwo)];
+
+        return UserConnection::query()
+            ->where('user_one_id', $smaller)
+            ->where('user_two_id', $larger)
+            ->first();
+    }
+
+    /** The pending request between two users in either direction. */
+    public static function pendingRequestBetween(int $userOne, int $userTwo): ?ConnectionRequest
+    {
+        return ConnectionRequest::query()
+            ->whereIn('sender_id', [$userOne, $userTwo])
+            ->whereIn('receiver_id', [$userOne, $userTwo])
+            ->whereColumn('sender_id', '!=', 'receiver_id')
+            ->where('status', ConnectionRequestStatus::Pending->value)
+            ->first();
+    }
+
+    /**
+     * Account eligibility for social interactions: must be active,
+     * verified and not deleted. Centralizes the suspended/deleted checks
+     * used by every Phase 05 service.
+     */
+    public function isSociallyActive(): bool
+    {
+        return $this->status === 'active' && $this->email_verified_at !== null;
     }
 
     public function isSuperAdmin(): bool

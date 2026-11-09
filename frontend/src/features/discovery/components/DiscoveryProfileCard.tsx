@@ -4,6 +4,8 @@ import { Avatar, Badge, Button, InterestChip, Tooltip } from '../../../component
 import { formatLocaleDate } from '../../../i18n'
 import { MatchExplanation, MatchScoreIndicator } from './MatchScoreIndicator'
 import { DiscoveryFeedbackMenu } from './DiscoveryFeedbackMenu'
+import { FollowButton } from '../../connections/components/FollowButton'
+import { ConnectionRequestButton } from '../../connections/components/ConnectionRequestButton'
 import type { DiscoveryProfile, FeedbackType } from '../types'
 
 export type DiscoveryProfileCardProps = {
@@ -53,10 +55,18 @@ export function DiscoveryProfileCard({ profile, onFeedback, onUndoFeedback, hidd
       <footer className="discovery-card-actions">
         {profile.joined_at ? <Badge>{formatLocaleDate(profile.joined_at, locale)}</Badge> : null}
         <div className="discovery-card-buttons">
-          {/* Connect is a future capability: rendered clearly unavailable until Phase 05. */}
-          <Tooltip content={t.discovery.card.connectUnavailable} position="top">
-            <Button variant="soft" size="sm" disabled>{t.discovery.card.connect}</Button>
-          </Tooltip>
+          {/* Phase 05: live follow / connect controls when the API sent
+              relationship state; otherwise keep the clearly-unavailable hint. */}
+          {profile.relationship ? (
+            <>
+              <FollowButton userId={profile.id} relationship={profile.relationship} />
+              <ConnectionRequestButton userId={profile.id} relationship={profile.relationship} />
+            </>
+          ) : (
+            <Tooltip content={t.discovery.card.connectUnavailable} position="top">
+              <Button variant="soft" size="sm" disabled>{t.discovery.card.connect}</Button>
+            </Tooltip>
+          )}
           <Link className="ui-button ui-button-secondary ui-button-sm" to={`/people/${profile.username}`}>{t.discovery.card.viewProfile}</Link>
         </div>
       </footer>

@@ -1,6 +1,6 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 import { Navigate, Outlet, Route, Routes, useOutletContext } from 'react-router-dom'
-import { Bell, CalendarDays, HeartHandshake, MessageCircle, Settings, ShieldCheck, Sparkles, Users } from 'lucide-react'
+import { Bell, CalendarDays, MessageCircle, Settings, ShieldCheck, Sparkles, Users } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { authService } from './services/authService'
 import { AdminLayout, AuthLayout, MemberLayout, PublicLayout, ThemeSync } from './layouts/AppLayouts'
@@ -10,6 +10,7 @@ import './App.css'
 import './layout.css'
 import './responsive.css'
 import './features/discovery/discovery.css'
+import './features/connections/connections.css'
 
 const HomePage = lazy(() => import('./pages/PublicPages').then((module) => ({ default: module.HomePage })))
 const PublicInfoPage = lazy(() => import('./pages/PublicPages').then((module) => ({ default: module.PublicInfoPage })))
@@ -26,6 +27,8 @@ const DiscoverPage = lazy(() => import('./features/discovery/pages/DiscoverPage'
 const PeopleExplorerPage = lazy(() => import('./features/discovery/pages/PeopleExplorerPage').then((module) => ({ default: module.PeopleExplorerPage })))
 const DiscoveryProfilePage = lazy(() => import('./features/discovery/pages/DiscoveryProfilePage').then((module) => ({ default: module.DiscoveryProfilePage })))
 const DiscoverySettingsPage = lazy(() => import('./features/discovery/pages/DiscoverySettingsPage').then((module) => ({ default: module.DiscoverySettingsPage })))
+const ConnectionsPage = lazy(() => import('./features/connections/pages/ConnectionsPage').then((module) => ({ default: module.ConnectionsPage })))
+const NotificationsPage = lazy(() => import('./features/connections/pages/NotificationsPage').then((module) => ({ default: module.NotificationsPage })))
 const AdminUsersPage = lazy(() => import('./features/admin/AdminPage').then((module) => ({ default: module.AdminUsersPage })))
 
 function LoadingScreen() { return <div className="route-loading" role="status">Loading workspace…</div> }
@@ -77,12 +80,12 @@ export default function App() {
         <Route path="/discover" element={<Lazy><DiscoverPage /></Lazy>} />
         <Route path="/people" element={<Lazy><PeopleExplorerPage /></Lazy>} />
         <Route path="/people/:username" element={<Lazy><DiscoveryProfilePage /></Lazy>} />
-        <Route path="/connections" element={<Lazy><PlaceholderPage title="Connections" description="Your growing circle, kept at your pace." icon={HeartHandshake} /></Lazy>} />
+        <Route path="/connections" element={<Lazy><ConnectionsPage /></Lazy>} />
         <Route path="/feed" element={<Lazy><PlaceholderPage title="Feed" description="A future home for updates from your communities." icon={Sparkles} /></Lazy>} />
         <Route path="/messages" element={<Lazy><PlaceholderPage title="Messages" description="Private conversations are part of the next layer." icon={MessageCircle} /></Lazy>} />
         <Route path="/communities" element={<Lazy><PlaceholderPage title="Communities" description="Find spaces organized around the things you care about." icon={Users} /></Lazy>} />
         <Route path="/events" element={<Lazy><PlaceholderPage title="Events" description="Join gatherings, workshops, and shared experiences." icon={CalendarDays} /></Lazy>} />
-        <Route path="/notifications" element={<Lazy><PlaceholderPage title="Notifications" description="Your relevant updates will appear here as the platform grows." icon={Bell} /></Lazy>} />
+        <Route path="/notifications" element={<Lazy><NotificationsPage /></Lazy>} />
         <Route path="/profile" element={<Lazy><ProfilePage /></Lazy>} />
         <Route path="/settings" element={<Lazy><SettingsPage /></Lazy>} />
         <Route path="/settings/discovery" element={<Lazy><DiscoverySettingsPage /></Lazy>} />

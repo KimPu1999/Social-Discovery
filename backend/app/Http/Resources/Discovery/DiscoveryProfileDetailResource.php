@@ -49,6 +49,8 @@ class DiscoveryProfileDetailResource extends JsonResource
             ],
             'visibility' => $profile->visibility,
             'joined_at' => $user->created_at?->toISOString(),
+            // Batched, authorization-safe relationship state (null when uncomputed).
+            'relationship' => $user->getAttribute('relationship_state'),
             'actions' => [
                 'can_report' => true,
                 'can_block' => true,

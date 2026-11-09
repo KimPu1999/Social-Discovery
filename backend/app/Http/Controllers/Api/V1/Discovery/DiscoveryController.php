@@ -7,11 +7,14 @@ use App\Http\Requests\Discovery\DiscoverPeopleRequest;
 use App\Http\Resources\Discovery\DiscoveryInterestResource;
 use App\Http\Resources\Discovery\DiscoveryProfileDetailResource;
 use App\Http\Resources\Discovery\DiscoveryProfileResource;
+use App\Models\User;
 use App\Services\Discovery\DiscoveryService;
 use App\Services\Discovery\RecommendationService;
+use App\Services\Social\RelationshipService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 
 /**
@@ -36,6 +39,8 @@ class DiscoveryController extends Controller
         $validated = $request->validated();
         $page = $this->discovery->people($request->user(), array_filter($validated, static fn ($value) => $value !== null));
 
+        $this->attachRelationships($request->user(), collect($page->items()));
+
         return response()->json([
             'data' => DiscoveryProfileResource::collection($page->items())->resolve(),
             'meta' => [
@@ -52,6 +57,8 @@ class DiscoveryController extends Controller
     {
         $limit = in_array((int) $request->query('limit', 8), [4, 8, 12], true) ? (int) $request->query('limit', 8) : 8;
         $recommendations = app(RecommendationService::class)->recommendedFor($request->user(), $limit);
+
+        $this->attachRelationships($request->user(), collect($recommendations)->pluck('user'));
 
         return response()->json(['data' => array_map(
             static fn (array $entry): array => DiscoveryProfileResource::make($entry['user'])->resolve(),
@@ -92,6 +99,21 @@ class DiscoveryController extends Controller
             return response()->json(['message' => __('Profile unavailable.')], 404);
         }
 
+        $this->attachRelationships($request->user(), collect([$profile->user]));
+
         return response()->json(['profile' => new DiscoveryProfileDetailResource($profile->user)]);
+    }
+
+    /**
+     * Batch one relationship-state lookup for the whole page (no N+1)
+     * and stamp it on each user for the resources to embed.
+     */
+    private function attachRelationships(User $viewer, Collection $users): void
+    {
+        $states = app(RelationshipService::class)->forUsers($viewer, $users);
+
+        foreach ($users as $user) {
+            $user->setAttribute('relationship_state', $states[$user->getKey()] ?? null);
+        }
     }
 }

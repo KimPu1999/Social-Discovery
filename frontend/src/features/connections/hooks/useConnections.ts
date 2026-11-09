@@ -1,0 +1,143 @@
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { discoveryKeys } from '../../discovery/hooks/useDiscovery'
+import { connectionsApi } from '../api/connectionsApi'
+import type { SocialListParams } from '../types'
+
+/** Centralized query keys for every Phase 05 read. */
+export const connectionsKeys = {
+  all: ['connections'] as const,
+  relationship: (userId: number) => [...connectionsKeys.all, 'relationship', userId] as const,
+  followers: (userId: number, params: SocialListParams) => [...connectionsKeys.all, 'followers', userId, params] as const,
+  following: (userId: number, params: SocialListParams) => [...connectionsKeys.all, 'following', userId, params] as const,
+  mutual: (userId: number) => [...connectionsKeys.all, 'mutual', userId] as const,
+  myConnections: (params: SocialListParams) => [...connectionsKeys.all, 'mine', params] as const,
+  userConnections: (userId: number, params: SocialListParams) => [...connectionsKeys.all, 'user', userId, params] as const,
+  incoming: (params: SocialListParams) => [...connectionsKeys.all, 'incoming', params] as const,
+  outgoing: (params: SocialListParams) => [...connectionsKeys.all, 'outgoing', params] as const,
+  blocked: (params: SocialListParams) => [...connectionsKeys.all, 'blocked', params] as const,
+  notifications: ['notifications'] as const,
+  notificationsPage: (params: SocialListParams) => [...connectionsKeys.notifications, 'page', params] as const,
+}
+
+/**
+ * After any social mutation, refresh relationship-burning reads: the
+ * connections space, the viewer's own relationship summaries and the
+ * discovery results (relationship state is embedded in cards).
+ */
+function useSocialInvalidation() {
+  const queryClient = useQueryClient()
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: connectionsKeys.all })
+    void queryClient.invalidateQueries({ queryKey: discoveryKeys.all })
+  }
+}
+
+export function useRelationship(userId: number, enabled = true) {
+  return useQuery({ queryKey: connectionsKeys.relationship(userId), queryFn: () => connectionsApi.relationship(userId), enabled, staleTime: 15_000 })
+}
+
+export function useMutualConnections(userId: number, enabled = true) {
+  return useQuery({ queryKey: connectionsKeys.mutual(userId), queryFn: () => connectionsApi.mutualConnections(userId), enabled, staleTime: 30_000 })
+}
+
+export function useFollowers(userId: number, params: SocialListParams, enabled = true) {
+  return useQuery({ queryKey: connectionsKeys.followers(userId, params), queryFn: () => connectionsApi.followers(userId, { params }), placeholderData: keepPreviousData, staleTime: 10_000, enabled })
+}
+
+export function useFollowing(userId: number, params: SocialListParams, enabled = true) {
+  return useQuery({ queryKey: connectionsKeys.following(userId, params), queryFn: () => connectionsApi.following(userId, { params }), placeholderData: keepPreviousData, staleTime: 10_000, enabled })
+}
+
+export function useMyConnections(params: SocialListParams) {
+  return useQuery({ queryKey: connectionsKeys.myConnections(params), queryFn: () => connectionsApi.myConnections({ params }), placeholderData: keepPreviousData, staleTime: 10_000 })
+}
+
+export function useUserConnections(userId: number, params: SocialListParams) {
+  return useQuery({ queryKey: connectionsKeys.userConnections(userId, params), queryFn: () => connectionsApi.userConnections(userId, { params }), placeholderData: keepPreviousData, staleTime: 10_000 })
+}
+
+export function useIncomingRequests(params: SocialListParams) {
+  return useQuery({ queryKey: connectionsKeys.incoming(params), queryFn: () => connectionsApi.incomingRequests({ params }), placeholderData: keepPreviousData })
+}
+
+export function useOutgoingRequests(params: SocialListParams) {
+  return useQuery({ queryKey: connectionsKeys.outgoing(params), queryFn: () => connectionsApi.outgoingRequests({ params }), placeholderData: keepPreviousData })
+}
+
+export function useBlockedUsers(params: SocialListParams) {
+  return useQuery({ queryKey: connectionsKeys.blocked(params), queryFn: () => connectionsApi.blockedUsers({ params }), placeholderData: keepPreviousData })
+}
+
+export function useNotifications(params: SocialListParams) {
+  return useQuery({ queryKey: connectionsKeys.notificationsPage(params), queryFn: () => connectionsApi.notifications({ params }), placeholderData: keepPreviousData })
+}
+
+export function useUnreadNotificationCount(enabled = true) {
+  return useQuery({ queryKey: [...connectionsKeys.notifications, 'unread'], queryFn: connectionsApi.unreadCount, enabled, staleTime: 20_000 })
+}
+
+/** Follow and unfollow share one hook so callers keep a single pending flag. */
+export function useFollowActions() {
+  const invalidate = useSocialInvalidation()
+
+  const follow = useMutation({
+    mutationFn: connectionsApi.follow,
+    onSuccess: invalidate,
+  })
+  const unfollow = useMutation({
+    mutationFn: connectionsApi.unfollow,
+    onSuccess: invalidate,
+  })
+
+  return { follow, unfollow }
+}
+
+export function useSendConnectionRequest() {
+  const invalidate = useSocialInvalidation()
+  return useMutation({ mutationFn: connectionsApi.sendRequest, onSuccess: invalidate })
+}
+
+/** Accept / decline / cancel share one hook; each posts to its endpoint. */
+export function useRequestResponse() {
+  const invalidate = useSocialInvalidation()
+
+  const accept = useMutation({ mutationFn: connectionsApi.acceptRequest, onSuccess: invalidate })
+  const decline = useMutation({ mutationFn: connectionsApi.declineRequest, onSuccess: invalidate })
+  const cancel = useMutation({ mutationFn: connectionsApi.cancelRequest, onSuccess: invalidate })
+
+  return { accept, decline, cancel }
+}
+
+export function useRemoveConnection() {
+  const invalidate = useSocialInvalidation()
+  return useMutation({ mutationFn: connectionsApi.removeConnection, onSuccess: invalidate })
+}
+
+/** Block and unblock also tear down cached lists; keep them together. */
+export function useBlockActions() {
+  const invalidate = useSocialInvalidation()
+
+  const block = useMutation({ mutationFn: connectionsApi.block, onSuccess: invalidate })
+  const unblock = useMutation({ mutationFn: connectionsApi.unblock, onSuccess: invalidate })
+
+  return { block, unblock }
+}
+
+export function useNotificationReads() {
+  const queryClient = useQueryClient()
+
+  const markRead = useMutation({
+    mutationFn: connectionsApi.markRead,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: connectionsKeys.notifications })
+    },
+  })
+  const markAllRead = useMutation({
+    mutationFn: connectionsApi.markAllRead,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: connectionsKeys.notifications })
+    },
+  })
+
+  return { markRead, markAllRead }
+}

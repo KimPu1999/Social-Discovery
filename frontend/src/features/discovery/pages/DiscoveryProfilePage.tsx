@@ -1,21 +1,24 @@
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, CalendarDays, Flag, Globe, MapPin, ShieldOff, Sparkles } from 'lucide-react'
-import { useEffect } from 'react'
+import { ArrowLeft, CalendarDays, Flag, Globe, MapPin, ShieldOff, ShieldCheck, Sparkles, Users } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from '../../../layouts/AppLayouts'
-import { Avatar, Badge, Button, Card, CardHeader, InterestChip, Tooltip, useToast } from '../../../components/ui'
-import { formatLocaleDate, interpolate } from '../../../i18n'
+import { Avatar, Badge, Button, Card, CardHeader, ConfirmDialog, InterestChip, Tooltip, useToast } from '../../../components/ui'
+import { formatLocaleDate, formatLocaleNumber, interpolate } from '../../../i18n'
 import { useDiscoveryFeedback, useDiscoveryProfile } from '../hooks/useDiscovery'
 import { MatchScoreIndicator } from '../components/MatchScoreIndicator'
 import { DiscoveryFeedbackMenu } from '../components/DiscoveryFeedbackMenu'
+import { useBlockActions, useRelationship } from '../../connections/hooks/useConnections'
+import { FollowButton } from '../../connections/components/FollowButton'
+import { ConnectionRequestButton } from '../../connections/components/ConnectionRequestButton'
+import { ConnectionStatusBadge } from '../../connections/components/ConnectionStatusBadge'
 import type { DiscoveryProfileDetail, FeedbackType } from '../types'
 
 /** Route /people/:username — privacy-safe public profile preview. */
 export function DiscoveryProfilePage() {
   const { username = '' } = useParams()
-  const { t, locale } = useTranslation()
+  const { t } = useTranslation()
   const toast = useToast()
   const profile = useDiscoveryProfile(username)
-  const feedback = useDiscoveryFeedback()
 
   // Errors other than the uniform privacy-safe 404 surface a generic message (no enumeration).
   const notFound = (profile.error as { response?: { status?: number } } | null)?.response?.status === 404
@@ -42,13 +45,27 @@ export function DiscoveryProfilePage() {
     )
   }
 
-  const data: DiscoveryProfileDetail = profile.data
+  return <ProfileView data={profile.data} />
+}
+
+/** Fully-loaded profile view; separate component so its social hooks stay unconditional. */
+function ProfileView({ data }: { data: DiscoveryProfileDetail }) {
+  const { t, locale } = useTranslation()
+  const toast = useToast()
+  const feedback = useDiscoveryFeedback()
+  const stats = useRelationship(data.id)
+  const blockActions = useBlockActions()
+  const [blocking, setBlocking] = useState(false)
+  const relationship = data.relationship ?? null
+
   const onFeedback = (type: FeedbackType) => {
     feedback.give.mutate({ targetUserId: data.id, feedbackType: type }, {
       onSuccess: () => toast('success', type === 'hide_profile' ? t.discovery.feedback.hiddenTitle : t.discovery.feedback.notInterestedTitle, t.discovery.feedback.hiddenCopy),
       onError: () => toast('danger', t.discovery.feedback.failed),
     })
   }
+
+  const counts = stats.data?.counts
 
   return (
     <div className="discovery-page">
@@ -72,10 +89,26 @@ export function DiscoveryProfilePage() {
           </div>
           <div className="discovery-card-tools">
             <MatchScoreIndicator match={data.match} />
+            {relationship ? <ConnectionStatusBadge relationship={relationship} /> : null}
             <DiscoveryFeedbackMenu hidden={false} busy={feedback.give.isPending} onFeedback={onFeedback} />
           </div>
         </div>
         {data.bio ? <p className="discovery-profile-bio">{data.bio}</p> : <p className="discovery-profile-bio is-muted">{t.discovery.card.noBio}</p>}
+
+        {/* Live social actions + real counts (Phase 05). Rendered only from
+            what the authorization layer chose to expose; nothing faked locally. */}
+        {relationship && relationship.can_follow ? <FollowButton userId={data.id} relationship={relationship} size="md" /> : null}
+        {relationship ? <ConnectionRequestButton userId={data.id} relationship={relationship} size="md" /> : null}
+        {counts ? (
+          <dl className="discovery-profile-social-counts">
+            <div><dt>{t.connections.tabs.followers}</dt><dd>{formatLocaleNumber(counts.followers, locale)}</dd></div>
+            <div><dt>{t.connections.tabs.following}</dt><dd>{formatLocaleNumber(counts.following, locale)}</dd></div>
+            <div><dt><Users size={11} aria-hidden="true" /> {t.connections.tabs.connections}</dt><dd>{formatLocaleNumber(counts.connections, locale)}</dd></div>
+            {stats.data && stats.data.mutual ? (
+              <div><dt>{t.connections.mutualTitle}</dt><dd>{formatLocaleNumber(stats.data.mutual.count, locale)}</dd></div>
+            ) : null}
+          </dl>
+        ) : null}
       </Card>
 
       <Card className="discovery-profile-section">
@@ -93,14 +126,46 @@ export function DiscoveryProfilePage() {
       </Card>
 
       <div className="discovery-profile-safety">
-        {/* Block and report need Phase 02+ safety endpoints; shown deliberately unavailable. */}
-        <Tooltip content={t.discovery.profile.safetyPending} position="top">
-          <Button variant="soft" size="sm" disabled><ShieldOff size={15} aria-hidden="true" /> {t.discovery.profile.blocking}</Button>
-        </Tooltip>
+        {relationship?.is_blocked_by_me ? (
+          <Button
+            variant="soft"
+            size="sm"
+            loading={blockActions.unblock.isPending}
+            disabled={blockActions.unblock.isPending}
+            onClick={() => blockActions.unblock.mutate(data.id, {
+              onSuccess: () => toast('info', t.connections.rows.unblocked),
+              onError: () => toast('danger', t.connections.errors.actionFailed),
+            })}
+          >
+            <ShieldCheck size={15} aria-hidden="true" /> {t.connections.blocking.unblock}
+          </Button>
+        ) : (
+          <Button variant="soft" size="sm" onClick={() => setBlocking(true)}>
+            <ShieldOff size={15} aria-hidden="true" /> {t.discovery.profile.blocking}
+          </Button>
+        )}
+        {/* Report waits for the Phase 02+ safety endpoints. */}
         <Tooltip content={t.discovery.profile.safetyPending} position="top">
           <Button variant="soft" size="sm" disabled><Flag size={15} aria-hidden="true" /> {t.discovery.profile.report}</Button>
         </Tooltip>
       </div>
+
+      <ConfirmDialog
+        open={blocking}
+        danger
+        title={interpolate(t.connections.blocking.title, { name: data.display_name })}
+        description={t.connections.blocking.copy}
+        confirmLabel={t.discovery.profile.blocking}
+        cancelLabel={t.actions.cancel}
+        loading={blockActions.block.isPending}
+        onClose={() => setBlocking(false)}
+        onConfirm={() => {
+          blockActions.block.mutate(data.id, {
+            onSuccess: () => { setBlocking(false); toast('info', t.connections.blocking.done) },
+            onError: () => { setBlocking(false); toast('danger', t.connections.errors.actionFailed) },
+          })
+        }}
+      />
     </div>
   )
 }

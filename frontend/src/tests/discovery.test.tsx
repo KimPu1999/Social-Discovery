@@ -10,6 +10,7 @@ import { DiscoverySettingsPage } from '../features/discovery/pages/DiscoverySett
 import { discoveryApi } from '../features/discovery/api/discoveryApi'
 import { useToastStore } from '../components/ui'
 import { useUiStore } from '../stores/uiStore'
+import { connectionsApi } from '../features/connections/api/connectionsApi'
 import type { DiscoveryProfile } from '../features/discovery/types'
 
 vi.mock('../features/discovery/api/discoveryApi', () => ({
@@ -23,6 +24,30 @@ vi.mock('../features/discovery/api/discoveryApi', () => ({
     updatePreferences: vi.fn(),
     giveFeedback: vi.fn(),
     undoFeedback: vi.fn(),
+  },
+}))
+
+const connectedRelationship = {
+  is_following: false,
+  is_followed_by: false,
+  is_connected: false,
+  request_status: 'none' as const,
+  can_follow: true,
+  can_connect: true,
+  is_blocked_by_me: false,
+}
+
+vi.mock('../features/connections/api/connectionsApi', () => ({
+  connectionsApi: {
+    relationship: vi.fn(),
+    followers: vi.fn(),
+    following: vi.fn(),
+    mutualConnections: vi.fn(),
+    sendRequest: vi.fn(),
+    block: vi.fn(),
+    unblock: vi.fn(),
+    follow: vi.fn(),
+    unfollow: vi.fn(),
   },
 }))
 
@@ -94,6 +119,14 @@ beforeEach(() => {
   vi.mocked(discoveryApi.preferences).mockResolvedValue({ discovery_enabled: false, show_in_recommendations: true, preferred_interest_categories: [] })
   vi.mocked(discoveryApi.giveFeedback).mockResolvedValue('Profile hidden.')
   vi.mocked(discoveryApi.undoFeedback).mockResolvedValue('Profile unhidden.')
+  vi.mocked(connectionsApi.relationship).mockResolvedValue({
+    relationship: connectedRelationship,
+    counts: { followers: 3, following: 2, connections: 1 },
+    mutual: { count: 1, preview: [{ id: 8, username: 'bo', display_name: 'Bo Keep' }] },
+  })
+  vi.mocked(connectionsApi.block).mockResolvedValue({ message: 'Blocked.', blocked: true })
+  vi.mocked(connectionsApi.follow).mockResolvedValue({ message: 'ok', followed: true, relationship: { ...connectedRelationship, is_following: true } })
+  vi.mocked(connectionsApi.sendRequest).mockResolvedValue({ message: 'ok', created: true, relationship: { ...connectedRelationship, request_status: 'outgoing_pending' as const } })
 })
 
 afterEach(() => { vi.clearAllMocks() })
@@ -204,22 +237,46 @@ describe('people explorer', () => {
 })
 
 describe('profile preview', () => {
-  it('renders the privacy-safe public profile', async () => {
+  it('renders the privacy-safe public profile with live social state', async () => {
     vi.mocked(discoveryApi.profile).mockResolvedValue({
       ...sharedProfile,
+      relationship: connectedRelationship,
       location_visible: false,
       cover_image_url: null,
       website_url: null,
       interests_visible: true,
       visibility: 'public',
-      actions: { can_report: true, can_block: true },
+      actions: { can_report: false, can_block: true },
     })
     const view = renderRoutes('/people/aria')
     expect(await view.findByText('Aria Sun')).toBeInTheDocument()
     expect(view.getByText('Public profile')).toBeInTheDocument()
-    // Block and Report stay deliberately unavailable before the safety layer ships.
-    expect(view.getByRole('button', { name: 'Block' })).toBeDisabled()
+
+    // Real counts from the relationship endpoint; nothing invented on the client.
+    expect(await view.findByText('3')).toBeInTheDocument()
+    // Report stays deliberately unavailable until the safety layer ships.
     expect(view.getByRole('button', { name: 'Report' })).toBeDisabled()
+  })
+
+  it('blocks the member after confirmation', async () => {
+    const user = userEvent.setup()
+    vi.mocked(discoveryApi.profile).mockResolvedValue({
+      ...sharedProfile,
+      relationship: connectedRelationship,
+      location_visible: false,
+      cover_image_url: null,
+      website_url: null,
+      interests_visible: true,
+      visibility: 'public',
+      actions: { can_report: false, can_block: true },
+    })
+    const view = renderRoutes('/people/aria')
+    await view.findByText('Aria Sun')
+    await user.click(view.getByRole('button', { name: 'Block' }))
+    // The confirm dialog reuses the "Block" wording; scope to the dialog.
+    const dialog = await view.findByRole('dialog')
+    await user.click(within(dialog).getByRole('button', { name: 'Block' }))
+    await waitFor(() => expect(vi.mocked(connectionsApi.block).mock.calls[0]?.[0]).toBe(7))
   })
 
   it('renders the uniform unavailable state for non-eligible profiles', async () => {
