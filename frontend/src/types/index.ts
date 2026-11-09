@@ -14,3 +14,9 @@ export type Profile = { id: number; display_name: string; username: string; bio?
 export type Interest = { id: number; name: string; slug: string; category: string }
 export type Settings = { language: 'en' | 'my'; theme: 'light' | 'dark' | 'system'; email_notifications: boolean; push_notifications: boolean }
 export type PrivacySettings = { profile_visibility: 'public' | 'connections' | 'private'; discovery_enabled: boolean; show_online_status: boolean; allow_message_requests: boolean; allow_connection_requests: boolean; show_interests: boolean; show_location: boolean }
+
+/** Laravel paginator envelope returned by admin endpoints. */
+export type Paginated<T> = { data: T[]; meta: { current_page: number; last_page: number; per_page: number; total: number } }
+export type AdminUser = { id: number; name: string; username: string; email?: string; status: string; role: string; created_at?: string }
+export type StatusValue = 'active' | 'suspended' | 'deactivated' | 'pending_verification'
+

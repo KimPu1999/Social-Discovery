@@ -46,6 +46,8 @@ php artisan social:create-super-admin
 
 Phase 2 authentication endpoints include registration/login/logout, email verification, password recovery, profile and media management, interests, settings/privacy, account lifecycle, and Super Admin user status/role management. Moderator routes are restricted to the `moderator` and `super_admin` roles; Super Admin routes require `super_admin` server-side authorization.
 
+Phase 3 adds the professional UI system: semantic CSS-variable design tokens with light/dark/system themes, a localized (EN/MM) component library, responsive member/admin/public/auth layouts with role-aware navigation, an authentic Super Admin user-management table over the paginated admin API, and URL-synchronized search/filter/pagination state. Set `VITE_SOCIAL_LINKS='[{"label":"…","url":"https://…"}]'` to expose optional social links in the footer; none are invented by default.
+
 ## Commands
 
 ```bash
