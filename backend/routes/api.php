@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AccountController;
+use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\AdminUserController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\Discovery;
@@ -39,6 +40,7 @@ Route::prefix('v1')->group(function (): void {
         Route::put('/auth/email', [AuthController::class, 'updateEmail'])->middleware('throttle:sensitive');
 
         Route::middleware('verified')->group(function (): void {
+            Route::get('/dashboard/overview', [DashboardController::class, 'overview']);
             Route::get('/profile', [ProfileController::class, 'show']);
             Route::put('/profile', [ProfileController::class, 'update']);
             Route::post('/profile/avatar', [ProfileController::class, 'avatar']);

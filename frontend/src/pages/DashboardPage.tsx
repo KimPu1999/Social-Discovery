@@ -1,118 +1,60 @@
-import { CalendarDays, HeartHandshake, Sparkles, Users } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { useState } from 'react'
+import type { ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Activity, ArrowUpRight, CalendarDays, CheckCircle2, Compass, Eye, Heart, LockKeyhole, MessageCircle, Settings2, Sparkles, Users, UserRound, UserRoundPlus, XCircle } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { authService } from '../services/authService'
-import { profileService } from '../services/profileService'
+import { Avatar, Badge, Button, Card, CardHeader, ErrorState, Skeleton } from '../components/ui'
 import { useTranslation } from '../layouts/AppLayouts'
-import { Avatar, Card, CardHeader, EmptyState, Skeleton } from '../components/ui'
-import { useDiscoveryOverview, useRecommendedPeople } from '../features/discovery/hooks/useDiscovery'
+import { dashboardService, type DashboardOverview } from '../services/dashboardService'
+import { formatLocaleNumber } from '../i18n'
 import { DiscoveryProfileCard } from '../features/discovery/components/DiscoveryProfileCard'
-import type { DiscoveryProfile } from '../features/discovery/types'
 
-const hourOf = (date: Date) => date.getHours()
+const local = (locale: string, en: string, my: string) => locale === 'my' ? my : en
+const relativeTime = (value: string | null, locale: string) => value ? new Intl.RelativeTimeFormat(locale === 'my' ? 'my-MM' : 'en', { numeric: 'auto' }).format(Math.round((new Date(value).getTime() - Date.now()) / 60000), 'minute') : ''
 
-function useGreeting(): 'greeting' | 'greetingAfternoon' | 'greetingEvening' {
-  const [hour] = useState(() => hourOf(new Date()))
-  return hour < 12 ? 'greeting' : hour < 18 ? 'greetingAfternoon' : 'greetingEvening'
-}
-
-/** Route /dashboard — welcome, shortcuts, live discovery data, empty states for future modules. */
 export function DashboardPage() {
-  const { t, locale } = useTranslation()
-  const greetingKey = useGreeting()
-  const user = useQuery({ queryKey: ['me'], queryFn: authService.me, staleTime: 60_000 })
-  const profile = useQuery({ queryKey: ['profile'], queryFn: profileService.get, retry: false })
-  const overview = useDiscoveryOverview()
-  const enabled = overview.data?.discovery_enabled ?? false
-  const recommended = useRecommendedPeople(enabled)
-
-  const firstName = user.data?.user.name.split(' ')[0] ?? 'there'
-  const completion = profile.data ? Math.min(100, Math.round(([profile.data.display_name, profile.data.bio, profile.data.location, profile.data.avatar_url, profile.data.interests?.length ? 'interests' : ''].filter(Boolean).length / 5) * 100)) : 0
-  const shortcuts = [
-    { icon: Users, title: t.dashboard.people, path: '/people' },
-    { icon: HeartHandshake, title: t.dashboard.interests, path: '/discover' },
-    { icon: Users, title: t.dashboard.communities, path: '/communities' },
-    { icon: CalendarDays, title: t.dashboard.events, path: '/events' },
-  ]
-  const suggestions: DiscoveryProfile[] = recommended.data ?? []
-
-  return (
-    <section className="page-shell dashboard-page">
-      {/* Section 1 — welcome panel */}
-      <div className="dashboard-welcome">
-        <div>
-          <p className="eyebrow">{t.dashboard.eyebrow}</p>
-          <h1>{t.dashboard[greetingKey]}, {firstName}.</h1>
-          <p className="page-description">{t.dashboard.intro}</p>
-          <div className="dashboard-welcome-actions">
-            <Link className="ui-button ui-button-primary ui-button-md" to="/discover">{t.dashboard.people}</Link>
-            <Link className="ui-button ui-button-ghost ui-button-md" to="/profile">{t.dashboard.editProfile}</Link>
-          </div>
-        </div>
-        <Avatar name={user.data?.user.name ?? firstName} src={profile.data?.avatar_url} size="xl" />
-      </div>
-
-      {/* Section 2 — discovery shortcuts */}
-      <Card className="dashboard-shortcuts">
-        <CardHeader eyebrow={t.dashboard.shortcuts} title={t.dashboard.shortcutsCopy} />
-        <div className="shortcut-grid">
-          {shortcuts.map(({ icon: Icon, title, path }) => (
-            <Link key={path} className="shortcut-card" to={path}>
-              <span className="shortcut-icon"><Icon size={18} /></span>
-              <span><strong>{title}</strong><small>{locale === 'my' ? 'စတင်ရန် ရွေးပါ' : 'Explore the next layer'}</small></span>
-              <span className="shortcut-arrow" aria-hidden="true">→</span>
-            </Link>
-          ))}
-        </div>
-      </Card>
-
-      <div className="dashboard-columns">
-        <div className="dashboard-main-column">
-          {/* Section 3 — suggested people (live recommendations) */}
-          <Card>
-            <CardHeader
-              eyebrow={t.dashboard.suggestions}
-              title={t.dashboard.suggestionsCopy}
-              action={<Link className="ui-button ui-button-ghost ui-button-sm" to="/discover">{t.nav.discover}</Link>}
-            />
-            {recommended.isLoading ? <div className="dashboard-card-skeletons"><Skeleton className="skeleton-line" /><Skeleton className="skeleton-line" /></div>
-              : suggestions.length ? <div className="dashboard-suggestion-list">{suggestions.slice(0, 3).map((suggestion) => <DiscoveryProfileCard key={suggestion.id} profile={suggestion} variant="recommended" />)}</div>
-                : <EmptyState icon={<Users size={23} />} title={t.empty.title} description={t.dashboard.suggestionsCopy} />}
-          </Card>
-
-          {/* Section 6 — recent activity placeholder until the feed phase */}
-          <Card>
-            <CardHeader eyebrow={t.dashboard.activity} title={t.dashboard.activityCopy} />
-            <EmptyState icon={<Sparkles size={23} />} title={t.social.suggestion} description={t.dashboard.activityCopy} />
-          </Card>
-        </div>
-
-        <div className="dashboard-side-column">
-          {/* Profile completion card */}
-          <Card className="profile-progress-card">
-            <CardHeader eyebrow={t.dashboard.profile} title={`${completion}%`} />
-            <div className="progress-track"><span style={{ width: `${completion}%` }} /></div>
-            <p>{t.dashboard.profileCopy}</p>
-            <div className="dashboard-progress-actions">
-              <Link className="ui-button ui-button-soft ui-button-sm" to="/profile">{t.dashboard.editProfile}</Link>
-              <Link className="ui-button ui-button-ghost ui-button-sm" to="/settings/discovery">{t.discovery.openSettings}</Link>
-            </div>
-          </Card>
-
-          {/* Section 4 — recommended communities (future module) */}
-          <Card>
-            <CardHeader eyebrow={t.dashboard.communities} title={t.dashboard.comingSoon} />
-            <EmptyState icon={<Users size={23} />} title={t.empty.title} description={t.dashboard.suggestionsCopy} />
-          </Card>
-
-          {/* Section 5 — upcoming events (future module) */}
-          <Card>
-            <CardHeader eyebrow={t.dashboard.events} title={t.dashboard.comingSoon} />
-            <EmptyState icon={<CalendarDays size={23} />} title={t.empty.title} description={t.dashboard.eventsCopy} />
-          </Card>
-        </div>
-      </div>
-    </section>
-  )
+  const { locale } = useTranslation()
+  const me = useQuery({ queryKey: ['me'], queryFn: authService.me, staleTime: 60_000 })
+  const userName = me.data?.user.name ?? 'there'
+  const query = useQuery({ queryKey: ['dashboard-overview'], queryFn: ({ signal }) => dashboardService.overview(signal), staleTime: 30_000 })
+  if (query.isLoading) return <DashboardSkeleton name={userName} />
+  if (query.error || !query.data) return <section className="page-shell dashboard-page"><header className="dashboard-header"><div><p className="eyebrow">{local(locale, 'Your workspace', 'သင့်အလုပ်နေရာ')}</p><h1>{local(locale, 'Welcome', 'ကြိုဆိုပါသည်')}, {userName}.</h1></div><Avatar name={userName} size="lg" /></header><ErrorState title={local(locale, 'Dashboard data unavailable', 'ဒက်ရှ်ဘုတ်အချက်အလက် မရနိုင်ပါ')} description={local(locale, 'We could not load your workspace data.', 'သင့်အလုပ်နေရာအချက်အလက် မရနိုင်ပါ။')} action={<Button variant="soft" size="sm" onClick={() => void query.refetch()}>{local(locale, 'Retry', 'ပြန်စမ်းရန်')}</Button>} /></section>
+  return <DashboardContent data={query.data} />
 }
+
+function DashboardContent({ data }: { data: DashboardOverview }) {
+  const { t, locale } = useTranslation()
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? t.dashboard.greeting : hour < 18 ? t.dashboard.greetingAfternoon : t.dashboard.greetingEvening
+  const name = data.profile.display_name || data.profile.username
+  const stats = [
+    { label: local(locale, 'My connections', 'ကျွန်ုပ်၏ဆက်သွယ်မှုများ'), value: data.connection_summary.connections, description: local(locale, 'People you are connected with', 'သင်နှင့် ဆက်သွယ်ထားသူများ'), href: '/connections', icon: Heart },
+    { label: local(locale, 'Followers', 'စောင့်ကြည့်သူများ'), value: data.connection_summary.followers, description: local(locale, 'People following you', 'သင့်ကို စောင့်ကြည့်သူများ'), href: '/connections?tab=followers', icon: Users },
+    { label: local(locale, 'Following', 'စောင့်ကြည့်နေသူများ'), value: data.connection_summary.following, description: local(locale, 'People you follow', 'သင် စောင့်ကြည့်နေသူများ'), href: '/connections?tab=following', icon: UserRound },
+    { label: local(locale, 'Pending requests', 'စောင့်ဆိုင်းတောင်းဆိုမှုများ'), value: data.connection_summary.pending_requests, description: local(locale, 'Requests waiting for you', 'သင့်ထံ စောင့်ဆိုင်းနေသော တောင်းဆိုမှုများ'), href: '/connections?tab=incoming', icon: UserRoundPlus },
+  ]
+  const actions = [
+    { title: local(locale, 'Discover people', 'လူများကို ရှာဖွေပါ'), description: local(locale, 'Find people with shared interests', 'စိတ်ဝင်စားမှုတူသူများကို ရှာဖွေပါ'), href: '/discover', icon: Compass },
+    { title: local(locale, 'Find connections', 'ဆက်သွယ်မှုများ ရှာဖွေပါ'), description: local(locale, 'Review your people space', 'သင့်လူမှုကွန်ယက်ကို ကြည့်ပါ'), href: '/connections', icon: Users },
+    { title: local(locale, 'Explore interests', 'စိတ်ဝင်စားမှုများ ရှာဖွေပါ'), description: local(locale, 'Refine what shapes your matches', 'သင့်ကိုက်ညီမှုများကို ပိုကောင်းအောင် ပြင်ပါ'), href: '/discover', icon: Sparkles },
+  ]
+  return <section className="page-shell dashboard-page">
+    <header className="dashboard-header"><div><p className="eyebrow">{t.dashboard.eyebrow}</p><h1>{greeting}, {name}.</h1><p className="page-description">{t.dashboard.intro}</p><div className="dashboard-header-actions"><Link className="ui-button ui-button-primary ui-button-sm" to="/discover"><Compass size={15} />{local(locale, 'Discover people', 'လူများကို ရှာဖွေပါ')}</Link><Link className="ui-button ui-button-ghost ui-button-sm" to="/profile">{local(locale, 'Edit profile', 'ပရိုဖိုင်ပြင်ရန်')}</Link></div></div><Avatar name={name} src={data.profile.avatar_url ?? undefined} size="lg" /></header>
+    <div className="dashboard-kpis">{stats.map(({ label, value, description, href, icon: Icon }) => <Link className="dashboard-kpi" to={href} key={label}><span className="dashboard-kpi-icon"><Icon size={17} /></span><span className="dashboard-kpi-copy"><small>{label}</small><strong>{formatLocaleNumber(value, locale)}</strong><em>{description}</em></span><ArrowUpRight size={15} className="dashboard-kpi-arrow" /></Link>)}</div>
+    <Card className="dashboard-actions-card"><CardHeader eyebrow={local(locale, 'Shortcuts', 'အမြန်လုပ်ဆောင်ချက်များ')} title={local(locale, 'Quick actions', 'အမြန်လုပ်ဆောင်ချက်များ')} /><div className="quick-actions">{actions.map(({ title, description, href, icon: Icon }) => <Link className="quick-action" to={href} key={title}><span className="quick-action-icon"><Icon size={17} /></span><span><strong>{title}</strong><small>{description}</small></span><ArrowUpRight size={15} /></Link>)}</div></Card>
+    <div className="dashboard-grid"><Card className="dashboard-span-8"><CardHeader eyebrow={local(locale, 'For you', 'သင့်အတွက်')} title={local(locale, 'Suggested people', 'အကြံပြုလူများ')} action={<Link className="text-link" to="/people">{local(locale, 'View all', 'အားလုံးကြည့်ရန်')} <ArrowUpRight size={14} /></Link>} />{data.suggested_people.length ? <div className="dashboard-suggestions">{data.suggested_people.map((person) => <DiscoveryProfileCard key={person.id} profile={person} variant="recommended" />)}</div> : <CompactEmpty icon={<Users size={19} />} title={local(locale, 'No suggestions yet', 'အကြံပြုချက် မရှိသေးပါ')} description={local(locale, 'Add interests to discover people.', 'လူများကို ရှာဖွေရန် စိတ်ဝင်စားမှုများ ထည့်ပါ။')} action={<Link className="ui-button ui-button-soft ui-button-sm" to="/profile">{local(locale, 'Edit interests', 'စိတ်ဝင်စားမှုများ ပြင်ရန်')}</Link>} />}</Card><ProfileCompletion data={data} /></div>
+    <div className="dashboard-grid"><FeedPreview data={data} /><ActivityPreview data={data} /></div>
+    <div className="dashboard-grid"><InterestPreview data={data} /><DiscoveryStatus data={data} /></div>
+    <div className="dashboard-grid"><UnavailableCard icon={<Users size={19} />} title={local(locale, 'Communities', 'အသိုင်းအဝိုင်းများ')} description={local(locale, 'Community spaces are not available yet.', 'အသိုင်းအဝိုင်းများ မရရှိသေးပါ။')} href="/communities" /><UnavailableCard icon={<CalendarDays size={19} />} title={local(locale, 'Upcoming events', 'လာမည့်ပွဲများ')} description={local(locale, 'Events will appear here when the module is available.', 'ပွဲများ module ရရှိလာသောအခါ ဤနေရာတွင် ပေါ်လာပါမည်။')} href="/events" /></div>
+  </section>
+}
+
+function ProfileCompletion({ data }: { data: DashboardOverview }) { const { locale } = useTranslation(); const complete = data.profile_completion.percentage === 100; return <Card className="profile-completion"><CardHeader eyebrow={local(locale, 'Profile health', 'ပရိုဖိုင်အခြေအနေ')} title={`${data.profile_completion.percentage}%`} /><div className="progress-track"><span style={{ width: `${data.profile_completion.percentage}%` }} /></div><p>{complete ? local(locale, 'Your profile is ready for discovery.', 'သင့်ပရိုဖိုင်သည် ရှာဖွေရန် အဆင်သင့်ဖြစ်ပါပြီ။') : local(locale, 'Complete a few details to improve your matches.', 'ကိုက်ညီမှုများ ပိုကောင်းရန် အချက်အလက်အချို့ ဖြည့်ပါ။')}</p>{!complete && <ul className="missing-fields">{data.profile_completion.missing.slice(0, 3).map((field) => <li key={field}>{field.replaceAll('_', ' ')}</li>)}</ul>}<div className="inline-actions"><Link className="ui-button ui-button-soft ui-button-sm" to="/profile">{local(locale, 'Edit profile', 'ပရိုဖိုင်ပြင်ရန်')}</Link><Link className="ui-button ui-button-ghost ui-button-sm" to="/profile">{local(locale, 'Manage interests', 'စိတ်ဝင်စားမှုများ စီမံရန်')}</Link></div></Card> }
+function FeedPreview({ data }: { data: DashboardOverview }) { const { locale } = useTranslation(); return <Card className="dashboard-span-8"><CardHeader eyebrow={local(locale, 'From your feed', 'သင့်ဖိဒ်မှ')} title={local(locale, 'Recent posts', 'လတ်တလောပို့စ်များ')} action={<Link className="text-link" to="/feed">{local(locale, 'View feed', 'ဖိဒ်ကြည့်ရန်')} <ArrowUpRight size={14} /></Link>} />{data.feed_preview.length ? <div className="feed-preview-list">{data.feed_preview.map((post) => <article className="feed-preview" key={post.id}><Avatar name={post.author.display_name} src={post.author.avatar_url ?? undefined} size="sm" /><div><div className="feed-preview-meta"><strong>{post.author.display_name}</strong><span>{relativeTime(post.published_at ?? null, locale)}</span></div><p>{post.body || local(locale, 'Shared a visual update.', 'ပုံနှင့်အတူ အပ်ဒိတ်တစ်ခု မျှဝေထားသည်။')}</p><small><Heart size={13} /> {post.counts.reactions} · <MessageCircle size={13} /> {post.counts.comments}</small></div></article>)}</div> : <CompactEmpty icon={<Sparkles size={19} />} title={local(locale, 'No posts to show', 'ပို့စ်များ မရှိသေးပါ')} description={local(locale, 'Accessible posts will appear here.', 'သင်ကြည့်နိုင်သော ပို့စ်များ ဤနေရာတွင် ပေါ်လာပါမည်။')} />}</Card> }
+function ActivityPreview({ data }: { data: DashboardOverview }) { const { locale } = useTranslation(); return <Card><CardHeader eyebrow={local(locale, 'Updates', 'အပ်ဒိတ်များ')} title={local(locale, 'Recent activity', 'လတ်တလောလုပ်ဆောင်မှု')} action={<Link className="text-link" to="/notifications">{local(locale, 'View all', 'အားလုံးကြည့်ရန်')} <ArrowUpRight size={14} /></Link>} />{data.recent_activity.length ? <div className="activity-list">{data.recent_activity.map((item) => <div className="activity-item" key={item.id}><span className="activity-icon"><Activity size={15} /></span><p>{activityCopy(item.type, item.actor?.display_name, locale)}<small>{relativeTime(item.created_at, locale)}</small></p></div>)}</div> : <CompactEmpty icon={<Activity size={19} />} title={local(locale, 'Nothing new', 'အသစ်မရှိသေးပါ')} description={local(locale, 'New social activity will appear here.', 'လူမှုရေးလုပ်ဆောင်ချက်အသစ်များ ဤနေရာတွင် ပေါ်လာပါမည်။')} />}</Card> }
+function InterestPreview({ data }: { data: DashboardOverview }) { const { locale } = useTranslation(); return <Card><CardHeader eyebrow={local(locale, data.interests.length ? 'Trending now' : 'Explore', data.interests.length ? 'လတ်တလောစိတ်ဝင်စားမှုများ' : 'ရှာဖွေပါ')} title={local(locale, data.interests.length ? 'Trending interests' : 'Explore interests', data.interests.length ? 'လတ်တလောစိတ်ဝင်စားမှုများ' : 'စိတ်ဝင်စားမှုများ ရှာဖွေပါ')} action={<Link className="text-link" to="/discover">{local(locale, 'Explore', 'ရှာဖွေမည်')} <ArrowUpRight size={14} /></Link>} />{data.interests.length ? <div className="interest-list">{data.interests.map((interest) => <Link to={`/discover?interest=${interest.id}`} className="interest-row" key={interest.id}><span><strong>{interest.name}</strong><small>{interest.category}</small></span><Badge>{formatLocaleNumber(interest.people_count, locale)} {local(locale, 'people', 'ဦး')}</Badge></Link>)}</div> : <CompactEmpty icon={<Sparkles size={19} />} title={local(locale, 'Explore what matters to you', 'သင့်အတွက် အရေးကြီးသောအရာများကို ရှာဖွေပါ')} description={local(locale, 'There is not enough activity to establish trends yet.', 'လတ်တလော trend သတ်မှတ်ရန် လုပ်ဆောင်ချက် မလုံလောက်သေးပါ။')} />}</Card> }
+function DiscoveryStatus({ data }: { data: DashboardOverview }) { const { locale } = useTranslation(); return <Card><CardHeader eyebrow={local(locale, 'Privacy controls', 'ကိုယ်ရေးလုံခြုံမှုထိန်းချုပ်မှု')} title={local(locale, 'Discovery status', 'ရှာဖွေမှုအခြေအနေ')} action={<Link className="text-link" to="/settings/discovery"><Settings2 size={14} /> {local(locale, 'Manage', 'စီမံရန်')}</Link>} /><div className={`status-banner ${data.discovery_status.enabled ? 'is-on' : 'is-off'}`}><span>{data.discovery_status.enabled ? <CheckCircle2 size={18} /> : <XCircle size={18} />}</span><div><strong>{data.discovery_status.enabled ? local(locale, 'Discovery enabled', 'ရှာဖွေမှု ဖွင့်ထားသည်') : local(locale, 'Discovery disabled', 'ရှာဖွေမှု ပိတ်ထားသည်')}</strong><small>{data.discovery_status.enabled ? local(locale, 'Your profile can be considered for recommendations.', 'သင့်ပရိုဖိုင်ကို အကြံပြုချက်များတွင် ထည့်သွင်းနိုင်သည်။') : local(locale, 'You are hidden from discovery until you enable it.', 'ဖွင့်မထားမချင်း သင့်ကို ရှာဖွေမှုတွင် မပြပါ။')}</small></div></div><div className="status-details"><span><Eye size={14} /> {data.discovery_status.visibility}</span><span><LockKeyhole size={14} /> {data.discovery_status.allow_connection_requests ? local(locale, 'Requests allowed', 'တောင်းဆိုမှုခွင့်ပြု') : local(locale, 'Requests restricted', 'တောင်းဆိုမှုကန့်သတ်')}</span></div></Card> }
+function UnavailableCard({ icon, title, description, href }: { icon: ReactNode; title: string; description: string; href: string }) { return <Card className="unavailable-card"><div className="unavailable-icon">{icon}</div><div><h2>{title}</h2><p>{description}</p></div><Link className="ui-button ui-button-ghost ui-button-sm" to={href}><ArrowUpRight size={14} /></Link></Card> }
+function CompactEmpty({ icon, title, description, action }: { icon: ReactNode; title: string; description: string; action?: ReactNode }) { return <div className="compact-empty"><span>{icon}</span><div><strong>{title}</strong><p>{description}</p></div>{action}</div> }
+function activityCopy(type: string, actor: string | undefined, locale: string) { const name = actor || (locale === 'my' ? 'တစ်စုံတစ်ဦး' : 'Someone'); if (type === 'new_follower') return `${name} ${local(locale, 'started following you', 'သည် သင့်ကို စောင့်ကြည့်စပါသည်')}`; if (type === 'connection_request') return `${name} ${local(locale, 'sent a connection request', 'မှ ဆက်သွယ်ရန် တောင်းဆိုထားသည်')}`; if (type === 'connection_accepted') return `${name} ${local(locale, 'accepted your connection', 'မှ သင့်ဆက်သွယ်မှုကို လက်ခံလိုက်သည်')}`; return `${name} ${local(locale, 'interacted with you', 'သည် သင့်နှင့် လုပ်ဆောင်ချက်ရှိသည်')}` }
+function DashboardSkeleton({ name }: { name?: string }) { return <section className="page-shell dashboard-page"><div className="dashboard-header"><div><p className="eyebrow">Your workspace</p>{name ? <h1>Welcome, {name}.</h1> : <Skeleton className="skeleton-line title" />}<Skeleton className="skeleton-line" /></div><Skeleton className="ui-avatar ui-avatar-lg" /></div><div className="dashboard-kpis">{[1, 2, 3, 4].map((n) => <Skeleton className="dashboard-kpi-skeleton" key={n} />)}</div><div className="dashboard-grid"><Card className="dashboard-span-8"><Skeleton className="skeleton-line title" /><Skeleton className="skeleton-block" /></Card><Card><Skeleton className="skeleton-line title" /><Skeleton className="skeleton-block" /></Card></div></section> }

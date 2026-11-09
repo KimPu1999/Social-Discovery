@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class UserProfile extends Model
@@ -12,4 +13,9 @@ class UserProfile extends Model
 
     protected $fillable = ['user_id', 'display_name', 'username', 'bio', 'location', 'website_url', 'birth_date', 'avatar_path', 'cover_image_path', 'visibility', 'onboarding_completed_at'];
     protected function casts(): array { return ['birth_date' => 'date', 'onboarding_completed_at' => 'datetime']; }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 }
