@@ -33,7 +33,10 @@ api.interceptors.response.use(
       await csrf()
       return api(request)
     }
-    const normalized = new Error(error.response?.data?.message ?? 'Something went wrong. Please try again.') as Error & { status?: number; errors?: Record<string, string[]> }
+    const message = error.response?.data?.message ?? (!error.response
+      ? 'Cannot reach the Social Discovery API. Start PostgreSQL and the Laravel server, then try again.'
+      : 'Something went wrong. Please try again.')
+    const normalized = new Error(message) as Error & { status?: number; errors?: Record<string, string[]> }
     normalized.status = error.response?.status
     normalized.errors = error.response?.data?.errors
     return Promise.reject(normalized)
