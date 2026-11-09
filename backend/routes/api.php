@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AccountController;
 use App\Http\Controllers\Api\V1\AdminUserController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\Discovery;
+use App\Http\Controllers\Api\V1\Feed;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InterestController;
 use App\Http\Controllers\Api\V1\ProfileController;
@@ -108,7 +109,50 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('/users/{user}/role', [AdminUserController::class, 'role']);
     });
 
+    // Phase 06 — Social feed, posts, media, comments, saves, shares,
+    // hashtags, search, reports (authenticated, verified users).
+    Route::middleware(['web', 'auth:sanctum', 'verified'])->group(function (): void {
+        Route::middleware('throttle:feed-read')->group(function (): void {
+            Route::get('/feed', [Feed\FeedController::class, 'index']);
+            Route::get('/posts/search', [Feed\PostController::class, 'search']);
+            Route::get('/posts/{post}', [Feed\PostController::class, 'show'])->whereNumber('post');
+            Route::get('/me/posts', [Feed\PostController::class, 'mine']);
+            Route::get('/me/posts/drafts', [Feed\PostController::class, 'drafts']);
+            Route::get('/me/saved-posts', [Feed\SavedPostController::class, 'index']);
+            Route::get('/users/{user}/posts', [Feed\PostController::class, 'forUser'])->whereNumber('user');
+            Route::get('/hashtags', [Feed\HashtagController::class, 'index']);
+            Route::get('/hashtags/{slug}/posts', [Feed\HashtagController::class, 'posts']);
+            Route::get('/posts/{post}/comments', [Feed\PostCommentController::class, 'index'])->whereNumber('post');
+            Route::get('/feed/media/{uuid}', [Feed\PostMediaController::class, 'show']);
+            Route::get('/posts/{post}/share-preview', [Feed\PostSharingController::class, 'preview'])->whereNumber('post');
+        });
+
+        Route::middleware('throttle:feed-write')->group(function (): void {
+            Route::post('/posts', [Feed\PostController::class, 'store']);
+            Route::patch('/posts/{post}', [Feed\PostController::class, 'update'])->whereNumber('post');
+            Route::delete('/posts/{post}', [Feed\PostController::class, 'destroy'])->whereNumber('post');
+            Route::post('/posts/{post}/publish', [Feed\PostController::class, 'publish'])->whereNumber('post');
+            Route::post('/posts/{post}/like', [Feed\PostReactionController::class, 'like'])->whereNumber('post');
+            Route::delete('/posts/{post}/like', [Feed\PostReactionController::class, 'unlike'])->whereNumber('post');
+            Route::post('/posts/{post}/save', [Feed\SavedPostController::class, 'save'])->whereNumber('post');
+            Route::delete('/posts/{post}/save', [Feed\SavedPostController::class, 'unsave'])->whereNumber('post');
+            Route::post('/posts/{post}/share', [Feed\PostSharingController::class, 'share'])->whereNumber('post');
+            Route::post('/posts/{post}/hide', [Feed\PostController::class, 'hide'])->whereNumber('post');
+            Route::delete('/posts/{post}/hide', [Feed\PostController::class, 'unhide'])->whereNumber('post');
+            Route::post('/posts/{post}/report', [Feed\ReportController::class, 'reportPost'])->whereNumber('post');
+            Route::post('/posts/{post}/comments', [Feed\PostCommentController::class, 'store'])->whereNumber('post');
+            Route::post('/comments/{comment}/replies', [Feed\PostCommentController::class, 'reply'])->whereNumber('comment');
+            Route::patch('/comments/{comment}', [Feed\PostCommentController::class, 'update'])->whereNumber('comment');
+            Route::delete('/comments/{comment}', [Feed\PostCommentController::class, 'destroy'])->whereNumber('comment');
+            Route::post('/comments/{comment}/report', [Feed\ReportController::class, 'reportComment'])->whereNumber('comment');
+            Route::delete('/feed/media/{uuid}', [Feed\PostMediaController::class, 'destroy']);
+        });
+    });
+
     Route::middleware(['web', 'auth:sanctum', 'verified', 'role:moderator,super_admin'])->prefix('moderator')->group(function (): void {
+        Route::get('/feed-reports', [Feed\ModeratorReportController::class, 'index']);
+        Route::post('/feed-reports/{reportId}/review', [Feed\ModeratorReportController::class, 'review'])->whereNumber('reportId');
+        Route::patch('/feed-reports/{reportId}', [Feed\ModeratorReportController::class, 'resolve'])->whereNumber('reportId');
         Route::get('/overview', fn () => response()->json(['status' => 'ok', 'scope' => 'moderation']));
     });
 });

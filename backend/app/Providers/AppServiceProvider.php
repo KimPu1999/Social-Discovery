@@ -38,5 +38,9 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('discovery-write', fn (Request $request) => Limit::perMinute(15)->by($request->user()?->id ?: $request->ip()));
         // Social writes (follow, requests, blocks): bounded per account.
         RateLimiter::for('social-write', fn (Request $request) => Limit::perMinute(30)->by($request->user()?->id ?: $request->ip()));
+        // Feed reads (feed, search, lists): generous but bounded for scraping.
+        RateLimiter::for('feed-read', fn (Request $request) => Limit::perMinute(120)->by($request->user()?->id ?: $request->ip()));
+        // Feed writes (posts, comments, reactions, saves, shares, reports).
+        RateLimiter::for('feed-write', fn (Request $request) => Limit::perMinute(40)->by($request->user()?->id ?: $request->ip()));
     }
 }

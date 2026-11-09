@@ -83,6 +83,18 @@ class User extends Authenticatable implements MustVerifyEmailContract
         return $this->hasMany(UserFollow::class, 'following_id');
     }
 
+    /** Posts authored by this user. */
+    public function posts(): HasMany
+    {
+        return $this->hasMany(Post::class);
+    }
+
+    /** Posts this user saved to their private reading list. */
+    public function savedPosts(): HasMany
+    {
+        return $this->hasMany(SavedPost::class);
+    }
+
     /** Outgoing connection requests sent by this user. */
     public function sentConnectionRequests(): HasMany
     {

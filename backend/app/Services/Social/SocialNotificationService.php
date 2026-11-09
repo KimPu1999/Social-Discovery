@@ -2,10 +2,16 @@
 
 namespace App\Services\Social;
 
+use App\Models\Post;
+use App\Models\PostComment;
 use App\Models\User;
+use App\Notifications\CommentRepliedNotification;
 use App\Notifications\ConnectionAcceptedNotification;
 use App\Notifications\ConnectionRequestNotification;
 use App\Notifications\NewFollowerNotification;
+use App\Notifications\PostCommentedNotification;
+use App\Notifications\PostLikedNotification;
+use App\Notifications\PostSharedNotification;
 use App\Notifications\SocialNotification;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -52,6 +58,26 @@ class SocialNotificationService
     public function connectionAccepted(User $recipient, User $acceptor): void
     {
         $this->send($recipient, new ConnectionAcceptedNotification($acceptor));
+    }
+
+    public function postLiked(User $recipient, User $actor, Post $post): void
+    {
+        $this->send($recipient, new PostLikedNotification($actor, $post));
+    }
+
+    public function postCommented(User $recipient, User $actor, Post $post, ?PostComment $comment = null): void
+    {
+        $this->send($recipient, new PostCommentedNotification($actor, $post, $comment));
+    }
+
+    public function commentReplied(User $recipient, User $actor, Post $post, ?PostComment $reply = null): void
+    {
+        $this->send($recipient, new CommentRepliedNotification($actor, $post, $reply));
+    }
+
+    public function postShared(User $recipient, User $actor, Post $sharedPost): void
+    {
+        $this->send($recipient, new PostSharedNotification($actor, $sharedPost));
     }
 
     /** Paginated notification feed for a user (server-side pagination). */

@@ -10,3 +10,6 @@ Artisan::command('inspire', function () {
 
 // Phase 04: impressions are quality-signal data with a bounded retention window.
 Schedule::command('discovery:prune-impressions --days=90')->dailyAt('03:30');
+
+// Phase 06: orphaned post media files are pruned once a day.
+Schedule::job(new \App\Jobs\PruneOrphanPostMedia)->dailyAt('04:00');
