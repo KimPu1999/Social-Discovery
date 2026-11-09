@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Models\User;
 use App\Services\Discovery\DiscoveryEligibilityService;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Phase 05 social authorization policy for user-to-user actions.
@@ -84,6 +85,10 @@ class SocialPolicy
             return false;
         }
 
+        if ($this->blockedBetween($viewer, $target)) {
+            return false;
+        }
+
         $privacy = $target->privacySettings;
 
         if (($privacy?->profile_visibility ?? 'public') === 'private') {
@@ -91,5 +96,19 @@ class SocialPolicy
         }
 
         return (bool) $privacy?->{$setting};
+    }
+
+    /** Lists and count summaries never disclose a blocked relationship. */
+    private function blockedBetween(User $viewer, User $target): bool
+    {
+        return DB::table('user_blocks')
+            ->where(static function ($query) use ($viewer, $target): void {
+                $query->where(static function ($sub) use ($viewer, $target): void {
+                    $sub->where('user_id', $viewer->getKey())->where('blocked_user_id', $target->getKey());
+                })->orWhere(static function ($sub) use ($viewer, $target): void {
+                    $sub->where('user_id', $target->getKey())->where('blocked_user_id', $viewer->getKey());
+                });
+            })
+            ->exists();
     }
 }

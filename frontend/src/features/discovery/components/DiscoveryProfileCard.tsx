@@ -8,6 +8,7 @@ import { MatchExplanation, MatchScoreIndicator } from './MatchScoreIndicator'
 import { DiscoveryFeedbackMenu } from './DiscoveryFeedbackMenu'
 import { FollowButton } from '../../connections/components/FollowButton'
 import { ConnectionRequestButton } from '../../connections/components/ConnectionRequestButton'
+import { ConnectionStatusBadge } from '../../connections/components/ConnectionStatusBadge'
 import { useBlockActions } from '../../connections/hooks/useConnections'
 import type { DiscoveryProfile, FeedbackType } from '../types'
 
@@ -69,6 +70,7 @@ export function DiscoveryProfileCard({ profile, onFeedback, onUndoFeedback, hidd
           {profile.relationship ? (
             <>
               <FollowButton userId={profile.id} relationship={profile.relationship} />
+              {!profile.relationship.can_connect && (profile.relationship.is_connected || profile.relationship.request_status !== 'none') ? <ConnectionStatusBadge relationship={profile.relationship} /> : null}
               <ConnectionRequestButton userId={profile.id} relationship={profile.relationship} />
             </>
           ) : (

@@ -77,9 +77,9 @@ class FollowController extends Controller
         $relationship = $viewer->is($user) ? null : $this->relationships->forPair($viewer, $user);
 
         $counts = [
-            'followers' => $this->follows->followerCount($user),
-            'following' => $this->follows->followingCount($user),
-            'connections' => $this->connections->countFor($user),
+            'followers' => Gate::forUser($viewer)->allows('viewFollowers', $user) ? $this->follows->followerCount($user) : null,
+            'following' => Gate::forUser($viewer)->allows('viewFollowing', $user) ? $this->follows->followingCount($user) : null,
+            'connections' => Gate::forUser($viewer)->allows('viewConnections', $user) ? $this->connections->countFor($user) : null,
         ];
 
         $mutual = null;

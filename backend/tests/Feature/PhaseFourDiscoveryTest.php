@@ -316,6 +316,22 @@ class PhaseFourDiscoveryTest extends TestCase
     // Preview & privacy
     // ------------------------------------------------------------------
 
+    public function test_public_profile_preview_includes_user_id_for_authorized_actions(): void
+    {
+        $viewer = $this->viewer();
+        $target = $this->eligibleUser(['name' => 'Public Profile']);
+
+        $payload = $this->actingAs($viewer)
+            ->getJson('/api/v1/discovery/people/'.$target->profile->username)
+            ->assertOk()
+            ->json('profile');
+
+        $this->assertSame($target->id, $payload['id']);
+        $this->assertSame('none', $payload['relationship']['request_status']);
+        $this->assertTrue($payload['relationship']['can_follow']);
+        $this->assertArrayNotHasKey('email', $payload);
+    }
+
     public function test_private_profile_preview_is_privacy_safe_and_uniform(): void
     {
         $viewer = $this->viewer();

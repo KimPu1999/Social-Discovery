@@ -258,6 +258,24 @@ describe('profile preview', () => {
     expect(view.getByRole('button', { name: 'Report' })).toBeDisabled()
   })
 
+  it('keeps the unfollow action available when the server reports an existing follow', async () => {
+    const following = { ...connectedRelationship, is_following: true, can_follow: false }
+    vi.mocked(discoveryApi.profile).mockResolvedValue({
+      ...sharedProfile,
+      relationship: following,
+      location_visible: false,
+      cover_image_url: null,
+      website_url: null,
+      interests_visible: true,
+      visibility: 'public',
+      actions: { can_report: false, can_block: true },
+    })
+    vi.mocked(connectionsApi.relationship).mockResolvedValue({ relationship: following, counts: { followers: 3, following: 2, connections: 1 }, mutual: null })
+
+    const view = renderRoutes('/people/aria')
+    expect(await view.findByRole('button', { name: 'Following' })).toBeInTheDocument()
+  })
+
   it('blocks the member after confirmation', async () => {
     const user = userEvent.setup()
     vi.mocked(discoveryApi.profile).mockResolvedValue({

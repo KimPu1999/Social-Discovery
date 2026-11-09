@@ -378,7 +378,7 @@ class PhaseFiveSocialConnectionsTest extends TestCase
         [$actor, $target] = [$this->member(['name' => 'Ada']), $this->member(['name' => 'Brat'])];
         UserFollow::query()->create(['follower_id' => $actor->id, 'following_id' => $target->id]);
 
-        $target->privacySettings()->update(['show_followers' => false, 'show_following' => false, 'allow_follows' => false, 'allow_connection_requests' => false, 'show_mutual_connections' => false]);
+        $target->privacySettings()->update(['show_followers' => false, 'show_following' => false, 'show_connections' => false, 'allow_follows' => false, 'allow_connection_requests' => false, 'show_mutual_connections' => false]);
 
         // Hidden lists answer 404 uniformly: no existence signal.
         $this->actingAs($actor)->getJson("/api/v1/users/{$target->id}/followers")->assertNotFound();
@@ -386,7 +386,13 @@ class PhaseFiveSocialConnectionsTest extends TestCase
         $relationship = $this->actingAs($target)->getJson("/api/v1/users/{$target->id}/relationship");
         $this->assertNull($relationship->json('mutual'));
 
-        $fresh = $this->member(['name' => 'Cy']);
+        $external = $this->member(['name' => 'Cy']);
+        $hiddenCounts = $this->actingAs($external)->getJson("/api/v1/users/{$target->id}/relationship");
+        $this->assertNull($hiddenCounts->json('counts.followers'));
+        $this->assertNull($hiddenCounts->json('counts.following'));
+        $this->assertNull($hiddenCounts->json('counts.connections'));
+
+        $fresh = $this->member(['name' => 'Dee']);
         $this->actingAs($fresh)->postJson("/api/v1/users/{$target->id}/follow")->assertStatus(409);
         $this->actingAs($fresh)->postJson('/api/v1/connections/requests', ['receiver_id' => $target->id])->assertStatus(409);
     }

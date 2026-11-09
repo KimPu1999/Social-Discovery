@@ -70,7 +70,7 @@ export type OutgoingRequest = {
 /** Relationship + counts response for profile surfaces. */
 export type RelationshipResponse = {
   relationship: RelationshipState | null
-  counts: { followers: number; following: number; connections: number }
+  counts: { followers: number | null; following: number | null; connections: number | null }
   mutual: { count: number; preview: SocialUser[] } | null
 }
 

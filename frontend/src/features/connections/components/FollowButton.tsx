@@ -35,7 +35,7 @@ export function FollowButton({ userId, relationship, size = 'sm' }: FollowButton
     }
     actions.follow.mutate(userId, {
       onSuccess: () => toast('success', t.connections.follow.done),
-      onError: () => toast('danger', t.connections.errors.actionFailed),
+      onError: (error) => toast('danger', error instanceof Error ? error.message : t.connections.errors.actionFailed),
     })
   }
 
@@ -45,9 +45,9 @@ export function FollowButton({ userId, relationship, size = 'sm' }: FollowButton
         setConfirming(false)
         toast('info', t.connections.follow.removed)
       },
-      onError: () => {
+      onError: (error) => {
         setConfirming(false)
-        toast('danger', t.connections.errors.actionFailed)
+        toast('danger', error instanceof Error ? error.message : t.connections.errors.actionFailed)
       },
     })
   }

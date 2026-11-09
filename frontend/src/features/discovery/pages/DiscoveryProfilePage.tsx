@@ -56,7 +56,10 @@ function ProfileView({ data }: { data: DiscoveryProfileDetail }) {
   const stats = useRelationship(data.id)
   const blockActions = useBlockActions()
   const [blocking, setBlocking] = useState(false)
-  const relationship = data.relationship ?? null
+  // The profile cache receives the optimistic mutation update immediately;
+  // the relationship endpoint remains the fallback while the profile payload
+  // is loading or comes from an older server response.
+  const relationship = data.relationship ?? stats.data?.relationship ?? null
 
   const onFeedback = (type: FeedbackType) => {
     feedback.give.mutate({ targetUserId: data.id, feedbackType: type }, {
@@ -97,13 +100,13 @@ function ProfileView({ data }: { data: DiscoveryProfileDetail }) {
 
         {/* Live social actions + real counts (Phase 05). Rendered only from
             what the authorization layer chose to expose; nothing faked locally. */}
-        {relationship && relationship.can_follow ? <FollowButton userId={data.id} relationship={relationship} size="md" /> : null}
+        {relationship ? <FollowButton userId={data.id} relationship={relationship} size="md" /> : null}
         {relationship ? <ConnectionRequestButton userId={data.id} relationship={relationship} size="md" /> : null}
         {counts ? (
           <dl className="discovery-profile-social-counts">
-            <div><dt>{t.connections.tabs.followers}</dt><dd>{formatLocaleNumber(counts.followers, locale)}</dd></div>
-            <div><dt>{t.connections.tabs.following}</dt><dd>{formatLocaleNumber(counts.following, locale)}</dd></div>
-            <div><dt><Users size={11} aria-hidden="true" /> {t.connections.tabs.connections}</dt><dd>{formatLocaleNumber(counts.connections, locale)}</dd></div>
+            {counts.followers !== null ? <div><dt>{t.connections.tabs.followers}</dt><dd>{formatLocaleNumber(counts.followers, locale)}</dd></div> : null}
+            {counts.following !== null ? <div><dt>{t.connections.tabs.following}</dt><dd>{formatLocaleNumber(counts.following, locale)}</dd></div> : null}
+            {counts.connections !== null ? <div><dt><Users size={11} aria-hidden="true" /> {t.connections.tabs.connections}</dt><dd>{formatLocaleNumber(counts.connections, locale)}</dd></div> : null}
             {stats.data && stats.data.mutual ? (
               <div><dt>{t.connections.mutualTitle}</dt><dd>{formatLocaleNumber(stats.data.mutual.count, locale)}</dd></div>
             ) : null}

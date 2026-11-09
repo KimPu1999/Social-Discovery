@@ -29,7 +29,7 @@ export function ConnectionRequestButton({ userId, relationship, size = 'sm' }: C
       disabled={send.isPending}
       onClick={() => send.mutate(userId, {
         onSuccess: () => toast('success', t.connections.request.sentTitle, t.connections.request.sentCopy),
-        onError: () => toast('danger', t.connections.errors.actionFailed),
+        onError: (error) => toast('danger', error instanceof Error ? error.message : t.connections.errors.actionFailed),
       })}
     >
       {t.connections.request.connect}

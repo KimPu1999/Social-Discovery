@@ -161,7 +161,14 @@ class DiscoveryService
             'viewed_at' => now(),
         ]);
 
-        return $target->profile;
+        // Keep the fully annotated target user attached to the returned
+        // profile. The controller/resource needs the same instance for the
+        // relationship state, match summary and privacy-filtered interests;
+        // lazy-loading profile->user here would drop those attributes.
+        $profile = $target->profile;
+        $profile->setRelation('user', $target);
+
+        return $profile;
     }
 
     /**
@@ -175,9 +182,13 @@ class DiscoveryService
             return $users;
         }
 
-        $annotated = $this->recommender->annotatedInterests($users->modelKeys(), $viewerInterestIds);
+        // This method is also used for a single profile preview, where the
+        // caller passes a base Support collection rather than an Eloquent
+        // collection. Normalize ids without relying on modelKeys().
+        $userIds = $users->map(static fn (User $user): int => (int) $user->getKey())->all();
+        $annotated = $this->recommender->annotatedInterests($userIds, $viewerInterestIds);
         $privateInterests = DB::table('user_privacy_settings')
-            ->whereIn('user_id', $users->modelKeys())
+            ->whereIn('user_id', $userIds)
             ->where('show_interests', false)
             ->pluck('user_id')
             ->map(static fn ($id) => (int) $id)

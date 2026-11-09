@@ -48,8 +48,10 @@
 .discovery-card-buttons > .ui-button,
 .discovery-card-buttons > .ui-tooltip,
 .discovery-card-buttons > .ui-tooltip > .ui-button,
-.discovery-card-buttons > .discovery-card-view-profile { width: 100%; max-width: 100%; min-width: 0; min-height: 36px; box-sizing: border-box; overflow-wrap: anywhere; white-space: normal; text-align: center; }
+.discovery-card-buttons > .discovery-card-view-profile,
+.discovery-card-buttons > .ui-badge { width: 100%; max-width: 100%; min-width: 0; min-height: 36px; box-sizing: border-box; overflow-wrap: anywhere; white-space: normal; text-align: center; }
 .discovery-card-buttons > .ui-tooltip { display: block; }
+.discovery-card-buttons > .ui-badge { justify-content: center; }
 .discovery-card-buttons > .discovery-card-view-profile { grid-column: 1 / -1; }
 .discovery-card-joined { display: inline-flex; max-width: 100%; min-width: 0; align-items: center; gap: 5px; color: var(--color-text-secondary); font-size: 10px; font-weight: 700; white-space: nowrap; }
 .discovery-card-joined svg { flex: 0 0 auto; }

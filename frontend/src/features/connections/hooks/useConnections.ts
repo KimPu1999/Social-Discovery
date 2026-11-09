@@ -52,12 +52,46 @@ function useOptimisticDiscoveryFollow() {
   }
 }
 
+/** Apply an outgoing request state immediately to cards and profile previews. */
+function updateDiscoveryConnection(current: unknown, userId: number): unknown {
+  const updateProfile = (profile: unknown) => {
+    if (!profile || typeof profile !== 'object' || (profile as { id?: number }).id !== userId) return profile
+    const value = profile as { relationship?: Record<string, unknown> | null }
+    if (!value.relationship) return profile
+    return {
+      ...value,
+      relationship: {
+        ...value.relationship,
+        request_status: 'outgoing_pending',
+        can_connect: false,
+      },
+    }
+  }
+
+  if (Array.isArray(current)) return current.map(updateProfile)
+  if (!current || typeof current !== 'object') return current
+  const value = current as { data?: unknown }
+  if (Array.isArray(value.data)) return { ...value, data: value.data.map(updateProfile) }
+  return updateProfile(current)
+}
+
+function restoreDiscoverySnapshots(queryClient: ReturnType<typeof useQueryClient>, snapshots?: DiscoveryCacheSnapshot) {
+  snapshots?.forEach(([key, value]) => queryClient.setQueryData(key, value))
+}
+
 function updateDiscoveryRelationship(current: unknown, userId: number, following: boolean): unknown {
   const updateProfile = (profile: unknown) => {
     if (!profile || typeof profile !== 'object' || (profile as { id?: number }).id !== userId) return profile
     const value = profile as { relationship?: Record<string, unknown> | null }
     if (!value.relationship) return profile
-    return { ...value, relationship: { ...value.relationship, is_following: following } }
+    return {
+      ...value,
+      relationship: {
+        ...value.relationship,
+        is_following: following,
+        can_follow: following ? false : true,
+      },
+    }
   }
 
   if (Array.isArray(current)) return current.map(updateProfile)
@@ -134,7 +168,19 @@ export function useFollowActions() {
 
 export function useSendConnectionRequest() {
   const invalidate = useSocialInvalidation()
-  return useMutation({ mutationFn: connectionsApi.sendRequest, onSuccess: invalidate })
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: connectionsApi.sendRequest,
+    onMutate: async (userId) => {
+      await queryClient.cancelQueries({ queryKey: discoveryKeys.all })
+      const snapshots = queryClient.getQueriesData({ queryKey: discoveryKeys.all })
+      queryClient.setQueriesData({ queryKey: discoveryKeys.all }, (current: unknown) => updateDiscoveryConnection(current, userId))
+      return snapshots
+    },
+    onError: (_error, _userId, snapshots) => restoreDiscoverySnapshots(queryClient, snapshots),
+    onSuccess: invalidate,
+  })
 }
 
 /** Accept / decline / cancel share one hook; each posts to its endpoint. */

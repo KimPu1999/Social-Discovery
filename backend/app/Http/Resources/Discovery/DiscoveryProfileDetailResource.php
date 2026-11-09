@@ -21,6 +21,10 @@ class DiscoveryProfileDetailResource extends JsonResource
         $showLocation = (bool) $privacy?->show_location;
 
         return [
+            // The public profile route needs the stable user id for
+            // authorized relationship mutations; no private account data is
+            // exposed by including this identifier.
+            'id' => $user->getKey(),
             'username' => $profile->username,
             'display_name' => $profile->display_name ?? $user->name,
             'bio' => $profile->bio,

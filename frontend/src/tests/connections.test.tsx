@@ -7,6 +7,7 @@ import { ThemeSync } from '../layouts/AppLayouts'
 import { ConnectionsPage } from '../features/connections/pages/ConnectionsPage'
 import { NotificationsPage } from '../features/connections/pages/NotificationsPage'
 import { FollowButton } from '../features/connections/components/FollowButton'
+import { ConnectionRequestButton } from '../features/connections/components/ConnectionRequestButton'
 import { connectionsApi } from '../features/connections/api/connectionsApi'
 import { useToastStore } from '../components/ui'
 import { useUiStore } from '../stores/uiStore'
@@ -178,6 +179,13 @@ describe('follow button', () => {
     await waitFor(() => {
       expect(useToastStore.getState().toasts.some((toast) => toast.title === 'You are now following this member.')).toBe(true)
     })
+  })
+
+  it('sends a real connection request to the selected user', async () => {
+    const user = userEvent.setup()
+    const view = renderNode(<ConnectionRequestButton userId={7} relationship={openRelationship} />)
+    await user.click(view.getByRole('button', { name: 'Connect' }))
+    await waitFor(() => expect(vi.mocked(connectionsApi.sendRequest).mock.calls[0]?.[0]).toBe(7))
   })
 })
 
